@@ -118,7 +118,7 @@ tried by many people yet. What has been verified, and how:
   against the command channel (wrong key, flipped bits, replays, bad fragments, ...): none got
   through (`test/hardware/command_security.py`).
 - **Automated tests:** C logic (frames, settings, report, LED timing), 49 protocol and vendor-lookup tests with a
-  firmware-produced known-answer vector, 61 Home Assistant tests (config flow, options flow,
+  firmware-produced known-answer vector, 70 Home Assistant tests (config flow, options flow,
   re-authentication, entities, trackers, activity log events), run by CI on every push, with mutation checks while
   writing them.
 - **Not verified:** more than one sensor in one Home Assistant, Home Assistant versions other

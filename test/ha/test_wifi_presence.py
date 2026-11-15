@@ -993,3 +993,127 @@ async def test_existing_trackers_get_the_vendor_on_the_next_start(hass: HomeAssi
     assert registry.async_get(old.entity_id).original_name == f"Wi-Fi presence {ESP} (Espressif Inc.)"
     assert registry.async_get(old.entity_id).entity_id == old.entity_id  # the id never changes
     assert registry.async_get(mine.entity_id).name == "Living room TV"
+
+
+# ---- the vendor in the names of the devices the framework creates ---------------------------
+
+
+async def _setup_with_known_macs(hass: HomeAssistant, *macs: str) -> MockConfigEntry:
+    """Set up the sensor, with every tracker enabled, while a router already knows these MACs."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id=ADDRESS, title="WiFi Presence",
+        data={CONF_ADDRESS: ADDRESS, CONF_KEY: KEY},
+        options={**options_from_config(Config(ssids=("MyNet",)), 30), CONF_TRACK_ALL: True},
+    )
+    entry.add_to_hass(hass)
+    router = MockConfigEntry(domain="fritz", title="Router")
+    router.add_to_hass(hass)
+    for mac in macs:
+        dr.async_get(hass).async_get_or_create(
+            config_entry_id=router.entry_id, connections={(dr.CONNECTION_NETWORK_MAC, mac)}, name=f"router {mac}"
+        )
+    with patch("custom_components.wifi_presence.coordinator.async_poll", AsyncMock(return_value=_result(*macs))):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    return entry
+
+
+def _our_devices(hass: HomeAssistant, entry) -> dict[str, str]:
+    """MAC -> name of the devices of this integration that are known by a MAC address."""
+    return {
+        next(value for kind, value in d.connections if kind == dr.CONNECTION_NETWORK_MAC): d.name
+        for d in dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
+        if any(kind == dr.CONNECTION_NETWORK_MAC for kind, _ in d.connections)
+    }
+
+
+async def test_devices_made_for_the_trackers_are_named_with_the_vendor(hass: HomeAssistant) -> None:
+    entry = await _setup_with_known_macs(hass, ESP, PHONE)
+    assert _our_devices(hass, entry) == {
+        ESP: f"{ESP} (Espressif Inc.)",
+        PHONE: PHONE,  # randomized address: no vendor, nothing added
+    }
+
+
+async def test_the_routers_own_devices_are_left_alone(hass: HomeAssistant) -> None:
+    await _setup_with_known_macs(hass, ESP)
+    router_devices = [
+        device
+        for router in hass.config_entries.async_entries("fritz")
+        for device in dr.async_entries_for_config_entry(dr.async_get(hass), router.entry_id)
+    ]
+    assert [d.name for d in router_devices] == [f"router {ESP}"]
+
+
+async def test_the_device_name_survives_a_restart_of_the_integration(hass: HomeAssistant) -> None:
+    entry = await _setup_with_known_macs(hass, ESP)
+    with patch("custom_components.wifi_presence.coordinator.async_poll", AsyncMock(return_value=_result(ESP))):
+        await hass.config_entries.async_reload(entry.entry_id)  # the framework renames to the bare MAC again
+        await hass.async_block_till_done()
+    assert _our_devices(hass, entry) == {ESP: f"{ESP} (Espressif Inc.)"}
+
+
+async def test_a_device_name_chosen_by_the_user_is_kept(hass: HomeAssistant) -> None:
+    entry = await _setup_with_known_macs(hass, ESP)
+    devices = dr.async_get(hass)
+    ours = next(d for d in dr.async_entries_for_config_entry(devices, entry.entry_id)
+                if any(v == ESP for _, v in d.connections))
+    devices.async_update_device(ours.id, name_by_user="Kitchen radio")
+    with patch("custom_components.wifi_presence.coordinator.async_poll", AsyncMock(return_value=_result(ESP))):
+        await hass.config_entries.async_reload(entry.entry_id)
+        await hass.async_block_till_done()
+    assert devices.async_get(ours.id).name_by_user == "Kitchen radio"
+
+
+async def test_entity_ids_stay_short_when_the_framework_made_a_device(hass: HomeAssistant) -> None:
+    entry = await _setup_with_known_macs(hass, ESP)
+    assert _tracker_id(hass, entry, ESP) == "device_tracker.wi_fi_presence_ac_67_b2_11_22_33"
+
+
+async def test_the_device_is_created_with_the_right_name_not_renamed_later(hass: HomeAssistant) -> None:
+    events = async_capture_events(hass, "device_registry_updated")
+    entry = await _setup_with_known_macs(hass, ESP)
+    ours = next(d for d in dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
+                if any(v == ESP for _, v in d.connections))
+    mine = [e.data["action"] for e in events if e.data["device_id"] == ours.id]
+    assert mine == ["create"]  # born with its name: no update, no rename
+    assert ours.name == f"{ESP} (Espressif Inc.)"
+
+
+async def test_no_name_change_on_later_starts_either(hass: HomeAssistant) -> None:
+    entry = await _setup_with_known_macs(hass, ESP)
+    events = async_capture_events(hass, "device_registry_updated")
+    with patch("custom_components.wifi_presence.coordinator.async_poll", AsyncMock(return_value=_result(ESP))):
+        await hass.config_entries.async_reload(entry.entry_id)
+        await hass.async_block_till_done()
+    ours = next(d for d in dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
+                if any(v == ESP for _, v in d.connections))
+    assert not [e for e in events if e.data["device_id"] == ours.id and e.data["action"] == "update"
+                and "name" in e.data.get("changes", {})]
+
+
+async def test_devices_made_by_earlier_versions_get_the_right_name_at_start(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id=ADDRESS, title="WiFi Presence",
+        data={CONF_ADDRESS: ADDRESS, CONF_KEY: KEY},
+        options={**options_from_config(Config(ssids=("MyNet",)), 30), CONF_TRACK_ALL: True},
+    )
+    entry.add_to_hass(hass)
+    router = MockConfigEntry(domain="fritz", title="Router")
+    router.add_to_hass(hass)
+    devices, entities = dr.async_get(hass), er.async_get(hass)
+    devices.async_get_or_create(config_entry_id=router.entry_id, connections={(dr.CONNECTION_NETWORK_MAC, ESP)}, name="router")
+    # what the previous version left behind: our device named after the bare address
+    old = devices.async_get_or_create(config_entry_id=entry.entry_id, connections={(dr.CONNECTION_NETWORK_MAC, ESP)}, name=ESP)
+    entities.async_get_or_create("device_tracker", DOMAIN, f"{entry.entry_id}_{ESP}", config_entry=entry,
+                                 device_id=old.id, original_name=f"Wi-Fi presence {ESP}")
+    with patch("custom_components.wifi_presence.coordinator.async_poll", AsyncMock(return_value=_result(ESP))):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    assert devices.async_get(old.id).name == f"{ESP} (Espressif Inc.)"
+
+
+async def test_the_state_shows_the_readable_name_only_when_there_is_one(hass: HomeAssistant) -> None:
+    entry = await _setup_with_known_macs(hass, ESP, PHONE)
+    assert hass.states.get(_tracker_id(hass, entry, ESP)).attributes["host_name"] == f"{ESP} (Espressif Inc.)"
+    assert "host_name" not in hass.states.get(_tracker_id(hass, entry, PHONE)).attributes

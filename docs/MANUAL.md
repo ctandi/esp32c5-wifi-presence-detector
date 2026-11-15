@@ -159,8 +159,8 @@ presence* plus the address of the device they follow, so searching *Settings →
 for an address (or for *Wi-Fi presence*) finds them; use the *Entities* tab of the
 integration, with disabled entities shown, to see all of them. If another integration
 already knows a device by that address (a phone with the companion app, a router entry), Home
-Assistant gives the tracker a small device of its own, named after the address; that is
-why a few such entries can appear on the integration page. Development builds from before the first
+Assistant gives the tracker a small device of its own, named `AA:BB:CC:11:22:33 (Vendor)` (the
+address alone when no vendor is known); that is why such entries appear on the integration page. Development builds from before the first
 release created a device per client, all named like the sensor; the integration removes
 those when it starts.
 
@@ -207,7 +207,7 @@ already knows by name shows with that name first: `Kitchen radio (AA:BB:…, Ven
 
 The first three bytes of a MAC address say which company registered it. The integration looks them
 up in a copy of the public IEEE registry (about 54,000 entries) that ships with it, **offline**: no
-address is ever sent anywhere. The vendor shows in the names of the trackers (the entity list), in the device picker and in the activity log. The entity *ids* stay short (`device_tracker.wi_fi_presence_ac_67_b2_11_22_33`), without the vendor. Names of existing trackers are updated the next time the integration starts; a name you set yourself is left alone.
+address is ever sent anywhere. The vendor shows in the names of the trackers (the entity list), in the names of the small devices Home Assistant creates for them (the list on the integration page), in the device picker and in the activity log. The devices are created with that name from the start, and the tracker's `host_name` attribute carries it too (only when a vendor is known). The entity *ids* stay short (`device_tracker.wi_fi_presence_ac_67_b2_11_22_33`), without the vendor. Names of existing trackers are updated the next time the integration starts; a name you set yourself is left alone.
 
 Nothing is shown when there is no vendor to name, not even a placeholder: phones use a random
 ("private") address per Wi-Fi network, which has no vendor by design, and some companies register

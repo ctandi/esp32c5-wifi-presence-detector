@@ -15,6 +15,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_TRACK_ALL
 from .coordinator import WifiPresenceConfigEntry, WifiPresenceCoordinator
+from . import oui
 from .labels import mac_with_vendor
 
 
@@ -63,6 +64,11 @@ class WifiClientTracker(CoordinatorEntity[WifiPresenceCoordinator], ScannerEntit
         self._attr_mac_address = mac
         # "Wi-Fi presence AA:BB:CC:11:22:33 (Vendor)"; no vendor, nothing added
         self._attr_name = f"Wi-Fi presence {mac_with_vendor(mac)}"
+        # The device Home Assistant creates for a tracker (when another integration already
+        # knows the address) is named after the hostname, or the bare address without one. So the
+        # readable name is handed over as the hostname, and the device is born with it. Only
+        # when a vendor is known: otherwise the address alone is the best name there is.
+        self._attr_hostname = mac_with_vendor(mac) if oui.lookup(mac) else None
         # No device_info on purpose: ScannerEntity manages the device itself and links the
         # tracker to a device that another integration already registered for this MAC.
 
