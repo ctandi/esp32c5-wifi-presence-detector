@@ -105,12 +105,13 @@ derived from the pairing key and both sides' nonces. Details and the wire format
 
 ## Project status
 
-This is a first release (0.1): it works in daily use on the author's setup, and has not been
+This is an early release (0.2): it works in daily use on the author's setup, and has not been
 tried by many people yet. What has been verified, and how:
 
 - **In a live Home Assistant 2026.11, through an ESPHome Bluetooth proxy:** flashing with the web
   flasher, discovery, pairing with the key, pushing and changing settings, the *Configure*
-  dialog (device picker, track all, rename), re-authentication, the status LED, and polling
+  dialog (device picker, track all, rename), re-authentication, the status LED, the activity log,
+  vendor names in entity and device names, and polling
   every 30 seconds.
 - **On real hardware** (Seeed XIAO ESP32-C5, ESP-IDF 5.5.1 and the CI build with 5.5.6): sniffing
   access points on both bands, the encrypted exchange, every settings option (band, search and
@@ -123,8 +124,8 @@ tried by many people yet. What has been verified, and how:
   writing them.
 - **Not verified:** more than one sensor in one Home Assistant, Home Assistant versions other
   than 2026.10 and 2026.11 (the integration needs 2026.10 or newer), flashing from
-  Windows or macOS (only Linux with Chromium was used), and the Marketplace *update*
-  path (only installs).
+  Windows or macOS (only Linux with Chromium was used), and the Marketplace's automatic
+  update notification (switching between releases by hand with *Install another version* worked).
 - **Known:** with an ESP-IDF v5.5.1 build the chip got stuck after a forced reset twice in
   ~30 tries and needed a USB unplug; with the published v5.5.6 build, 10 of 10 resets were
   fine, which is encouraging but too few to call it fixed. See
