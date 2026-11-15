@@ -277,7 +277,7 @@ Bluetooth name and the connection timeout.
 |------|-----|
 | C logic: frames, settings codec, report, fragments (with sanitizers) | `test/run_host_tests.sh` |
 | Protocol, settings, session logic, against a simulated sensor and a firmware-produced known-answer vector | `python3 -m unittest discover -s test` (needs `cryptography`, `bleak`) |
-| Home Assistant integration: config flow, options, reauth, entities | `pytest` (needs `pytest-homeassistant-custom-component`) |
+| Home Assistant integration: config flow, options, reauth, entities | `pip install pytest-homeassistant-custom-component && python test/ha/install_requirements.py`, then `pytest` |
 | A real sensor, as a hostile client: forged, replayed, tampered and malformed commands | `python3 test/hardware/command_security.py --key <key>` (needs a Bluetooth adapter) |
 | A real sensor, by hand | `tools/wp_client.py --key <key>`; add `--ssid MyWiFi` to push settings |
 

@@ -32,6 +32,7 @@ jobs:
       - name: Home Assistant integration tests
         run: |
           pip install pytest-homeassistant-custom-component
+          python test/ha/install_requirements.py
           python -m pytest -q
 
   firmware:
