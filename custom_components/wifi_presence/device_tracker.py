@@ -15,6 +15,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_TRACK_ALL
 from .coordinator import WifiPresenceConfigEntry, WifiPresenceCoordinator
+from .labels import mac_with_vendor
 
 
 async def async_setup_entry(
@@ -60,9 +61,15 @@ class WifiClientTracker(CoordinatorEntity[WifiPresenceCoordinator], ScannerEntit
         self._mac = mac
         self._unique_id = f"{entry.entry_id}_{mac}"
         self._attr_mac_address = mac
-        self._attr_name = f"Wi-Fi presence {mac}"
+        # "Wi-Fi presence AA:BB:CC:11:22:33 (Vendor)"; no vendor, nothing added
+        self._attr_name = f"Wi-Fi presence {mac_with_vendor(mac)}"
         # No device_info on purpose: ScannerEntity manages the device itself and links the
         # tracker to a device that another integration already registered for this MAC.
+
+    @property
+    def suggested_object_id(self) -> str:
+        """Keep the entity id short and stable: the address only, never the vendor."""
+        return f"Wi-Fi presence {self._mac}"
 
     @property
     def entity_registry_enabled_default(self) -> bool:

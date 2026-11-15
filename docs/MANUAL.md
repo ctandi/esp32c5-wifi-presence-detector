@@ -119,7 +119,7 @@ You get three sensors and, for every Wi-Fi client the sensor has heard, a device
 | *Clients present* | Number of devices currently connected to your Wi-Fi. The attribute `clients` lists them with signal strength. |
 | *Access points watched* | How many of your access points (counting every band and mesh node) the sensor found. `0` means it has not found your Wi-Fi yet. |
 | *Sensor uptime* | Seconds since the sensor started. |
-| *Wi-Fi presence aa:bb:cc:dd:ee:ff* (tracker) | One per device, named after the **device's** address. `home` while that device is on your Wi-Fi, otherwise `not_home`. |
+| *Wi-Fi presence aa:bb:cc:dd:ee:ff (Vendor)* (tracker) | One per device, named after the **device's** address and, when known, its vendor. `home` while that device is on your Wi-Fi, otherwise `not_home`. |
 
 **Track everything, or choose.** A home network is full of TVs, plugs and lamps, so by
 default the trackers start hidden (disabled) and only the ones you pick show up. If you
@@ -207,7 +207,7 @@ already knows by name shows with that name first: `Kitchen radio (AA:BB:…, Ven
 
 The first three bytes of a MAC address say which company registered it. The integration looks them
 up in a copy of the public IEEE registry (about 54,000 entries) that ships with it, **offline**: no
-address is ever sent anywhere. The vendor shows in the device list and the activity log.
+address is ever sent anywhere. The vendor shows in the names of the trackers (the entity list), in the device picker and in the activity log. The entity *ids* stay short (`device_tracker.wi_fi_presence_ac_67_b2_11_22_33`), without the vendor. Names of existing trackers are updated the next time the integration starts; a name you set yourself is left alone.
 
 Nothing is shown when there is no vendor to name, not even a placeholder: phones use a random
 ("private") address per Wi-Fi network, which has no vendor by design, and some companies register

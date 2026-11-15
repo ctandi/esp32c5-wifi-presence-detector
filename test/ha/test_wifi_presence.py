@@ -954,3 +954,42 @@ async def test_vendor_and_known_name_go_together(hass: HomeAssistant) -> None:
     result = await hass.config_entries.options.async_init(entry.entry_id)
     labels = {o["value"]: o["label"] for o in _tracked_field(result)[1].config["options"]}
     assert labels[ESP] == f"Kitchen radio \u00b7 {ESP} (Espressif Inc.) \u00b7 -50 dBm"
+
+
+# ---- the vendor in the entity names ---------------------------------------------------------
+
+
+async def test_tracker_names_carry_the_vendor_but_entity_ids_stay_short(hass: HomeAssistant) -> None:
+    entry = await _setup(hass, AsyncMock(return_value=_result(PHONE, ESP)))
+    registry = er.async_get(hass)
+    esp = registry.async_get(_tracker_id(hass, entry, ESP))
+    assert esp.original_name == f"Wi-Fi presence {ESP} (Espressif Inc.)"
+    # the entity id is made of the address only: no vendor, nothing long or changeable in it
+    assert esp.entity_id == "device_tracker.wi_fi_presence_ac_67_b2_11_22_33"
+    # a randomized address has no vendor: nothing is added, not even a placeholder
+    phone = registry.async_get(_tracker_id(hass, entry, PHONE))
+    assert phone.original_name == f"Wi-Fi presence {PHONE}"
+    assert phone.entity_id == "device_tracker.wi_fi_presence_aa_bb_cc_dd_ee_01"
+
+
+async def test_existing_trackers_get_the_vendor_on_the_next_start(hass: HomeAssistant) -> None:
+    entry = _entry()
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    # as created by an earlier version: no vendor in the name
+    old = registry.async_get_or_create(
+        "device_tracker", DOMAIN, f"{entry.entry_id}_{ESP}", config_entry=entry,
+        original_name=f"Wi-Fi presence {ESP}", suggested_object_id="wi_fi_presence_ac_67_b2_11_22_33",
+    )
+    # and one the user renamed himself: that must survive
+    mine = registry.async_get_or_create(
+        "device_tracker", DOMAIN, f"{entry.entry_id}_{TV}", config_entry=entry,
+        original_name=f"Wi-Fi presence {TV}", suggested_object_id="wi_fi_presence_tv",
+    )
+    registry.async_update_entity(mine.entity_id, name="Living room TV")
+    with patch("custom_components.wifi_presence.coordinator.async_poll", AsyncMock(return_value=_result(ESP, TV))):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    assert registry.async_get(old.entity_id).original_name == f"Wi-Fi presence {ESP} (Espressif Inc.)"
+    assert registry.async_get(old.entity_id).entity_id == old.entity_id  # the id never changes
+    assert registry.async_get(mine.entity_id).name == "Living room TV"

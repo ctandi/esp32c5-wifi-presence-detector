@@ -75,7 +75,8 @@ Discovered*, or start the setup with
 - An **activity log** on the sensor's device: "*AA:BB:CC:11:22:33 (Vendor) just became present*" and
   "... is now gone". The same events can trigger automations.
 - The **vendor** of each device (from the bundled IEEE registry, offline) next to its address in the
-  device list and in the log; nothing is shown for randomized addresses or unknown vendors.
+  entity names (*Wi-Fi presence AA:BB:CC:11:22:33 (Vendor)*), the device picker and the log; nothing is
+  shown for randomized addresses or unknown vendors.
 - A sensor you can name (for example *Wi-Fi presence living room*), so several sensors stay apart.
 - Settings in Home Assistant: the Wi-Fi names to watch (several allowed), country, bands,
   scan time per channel, how long a sleeping phone stays "home", minimum signal strength and
@@ -117,7 +118,7 @@ tried by many people yet. What has been verified, and how:
   against the command channel (wrong key, flipped bits, replays, bad fragments, ...): none got
   through (`test/hardware/command_security.py`).
 - **Automated tests:** C logic (frames, settings, report, LED timing), 49 protocol and vendor-lookup tests with a
-  firmware-produced known-answer vector, 59 Home Assistant tests (config flow, options flow,
+  firmware-produced known-answer vector, 61 Home Assistant tests (config flow, options flow,
   re-authentication, entities, trackers, activity log events), run by CI on every push, with mutation checks while
   writing them.
 - **Not verified:** more than one sensor in one Home Assistant, Home Assistant versions other
