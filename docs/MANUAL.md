@@ -116,17 +116,24 @@ You get three sensors and, for every Wi-Fi client the sensor has heard, a device
 | *Sensor uptime* | Seconds since the sensor started. |
 | *Wi-Fi aa:bb:cc:dd:ee:ff* (tracker) | `home` while that device is on your Wi-Fi, otherwise `not_home`. |
 
-**The trackers start disabled.** A home network is full of TVs, plugs and lamps, and you
-do not want hundreds of new entities. To track your phone:
+**Choose the devices to track.** A home network is full of TVs, plugs and lamps, so the
+trackers start hidden (disabled) and only the ones you pick show up:
 
-1. Find your phone's Wi-Fi address (on the phone: *Settings → About phone → Wi-Fi MAC
-   address*; if it shows "device MAC" and "private MAC", the private one is used when
-   connected to your network). Open the Wi-Fi presence device, click *+N entities not shown*
-   and find the tracker named *Wi-Fi* followed by that address. If you cannot tell, switch the phone's Wi-Fi
-   off for a few minutes: its tracker is the one that goes to `not_home`.
-2. Enable that tracker.
-3. *Settings → People*: add that tracker to your **Person**. Your automations can now use
+1. Open *Settings → Devices & services → Wi-Fi Presence Sensor → Configure*.
+2. In **Devices to track**, open the list. It shows every device the sensor has heard, the
+   ones heard right now first, with their signal strength. Devices Home Assistant already knows
+   by name (for example from the companion app or your router) are listed with that name.
+   Tick your phone. If you cannot tell which one it is, put the phone right next to the
+   sensor: it will be the strongest, or switch the phone's Wi-Fi off for a few minutes and
+   see which entry disappears from the *Clients present* attribute.
+3. Submit. The tracker of every ticked device is enabled at once (a `home` / `not_home`
+   state within a few seconds), and the others stay hidden.
+4. *Settings → People*: add that tracker to your **Person**. Your automations can use
    `person.you` as usual.
+
+The list fills as the sensor hears devices, so a new phone shows up here after the next
+check (30 seconds); open *Configure* again to add it. You can also enable or disable single
+trackers in the usual entity settings; the list reflects that.
 
 Phones usually use a *private* Wi-Fi address per network. That address stays the same for
 that network, so it works. If you set the phone to "rotate" the address, it looks like a
@@ -220,6 +227,15 @@ The sensor counts devices that are *associated with your access points*. It need
 few seconds per channel: after a settings change, give it a minute. Raising *Search time
 per channel* helps if the access point count is lower than you expect. Devices connected to
 a band the sensor cannot hear well (distance) are missed.
+
+**The console shows `disconnected (reason 531)` after every check.**
+That is normal. 531 means "the other side ended the connection": Home Assistant connects,
+reads the list, and hangs up, every 30 seconds. It is not an error and not a dropped
+connection. What matters is that *Sensor uptime* keeps growing in Home Assistant.
+
+**The sensors work, but nothing shows who is home.**
+The device trackers are hidden until you choose them: *Configure → Devices to track* (see
+[Use it](#4-use-it)). Until a device is ticked, you only see the three sensors.
 
 **The board does not start after flashing; the console repeats `rst:0x7 (TG0_WDT_HPSYS)`.**
 The chip is stuck in a state that a reset signal cannot clear. **Unplug the USB cable,

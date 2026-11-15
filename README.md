@@ -66,8 +66,9 @@ Discovered*, or start the setup with
 ## What you get
 
 - Clients currently on your Wi-Fi, as a count (with the list as an attribute).
-- A `device_tracker` per device ever heard, **disabled by default** (a home network is
-  full of TVs and plugs); enable your phone's and put it on a Person.
+- A `device_tracker` for every device ever heard, **hidden until you pick them**: in the
+  integration's *Configure* dialog, *Devices to track* lists everything heard (with the names
+  Home Assistant already knows, and signal strength). Tick your phone and put it on a Person.
 - Settings in Home Assistant: the Wi-Fi names to watch (several allowed), country, bands,
   scan time per channel, how long a sleeping phone stays "home", minimum signal strength and
   more. They are pushed to the sensor over Bluetooth, authenticated, and stored on it.

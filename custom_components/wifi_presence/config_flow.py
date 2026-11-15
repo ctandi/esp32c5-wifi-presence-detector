@@ -18,12 +18,15 @@ from homeassistant.config_entries import (
     OptionsFlow,
 )
 from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import section
+from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     TextSelector,
@@ -44,6 +47,7 @@ from .const import (
     CONF_RESCAN,
     CONF_SCAN_DWELL,
     CONF_SSIDS,
+    CONF_TRACKED,
     DEFAULT_POLL_INTERVAL,
     DOMAIN,
     POLL_INTERVAL_RANGE,
@@ -83,7 +87,9 @@ def _number(rng: tuple[int, int], unit: str | None = None) -> NumberSelector:
     return NumberSelector(config)
 
 
-def _settings_schema(values: Mapping[str, Any]) -> vol.Schema:
+def _settings_schema(
+    values: Mapping[str, Any], tracker_choices: list[SelectOptionDict] | None = None
+) -> vol.Schema:
     """The settings form: the essentials up front, the tuning folded away."""
     advanced = vol.Schema(
         {
@@ -109,15 +115,58 @@ def _settings_schema(values: Mapping[str, Any]) -> vol.Schema:
             ),
         }
     )
-    return vol.Schema(
-        {
-            vol.Required(CONF_SSIDS, default=values[CONF_SSIDS]): TextSelector(
-                TextSelectorConfig(multiple=True)
-            ),
-            vol.Required(CONF_COUNTRY, default=values[CONF_COUNTRY]): TextSelector(),
-            vol.Required(SECTION_ADVANCED): section(advanced, {"collapsed": True}),
-        }
-    )
+    fields: dict[Any, Any] = {
+        vol.Required(CONF_SSIDS, default=values[CONF_SSIDS]): TextSelector(
+            TextSelectorConfig(multiple=True)
+        ),
+        vol.Required(CONF_COUNTRY, default=values[CONF_COUNTRY]): TextSelector(),
+    }
+    if tracker_choices:  # only once the sensor has heard devices
+        fields[vol.Optional(CONF_TRACKED, default=values.get(CONF_TRACKED, []))] = SelectSelector(
+            SelectSelectorConfig(options=tracker_choices, multiple=True, mode="dropdown")
+        )
+    fields[vol.Required(SECTION_ADVANCED)] = section(advanced, {"collapsed": True})
+    return vol.Schema(fields)
+
+
+def _known_trackers(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, er.RegistryEntry]:
+    """The device trackers of this sensor, by MAC address."""
+    prefix = f"{entry.entry_id}_"
+    return {
+        reg.unique_id.removeprefix(prefix): reg
+        for reg in er.async_entries_for_config_entry(er.async_get(hass), entry.entry_id)
+        if reg.domain == "device_tracker" and reg.unique_id.startswith(prefix)
+    }
+
+
+def _tracker_choices(
+    hass: HomeAssistant, entry: ConfigEntry, macs: list[str]
+) -> list[SelectOptionDict]:
+    """Label every known device so the user can recognise their phone.
+
+    A name Home Assistant already knows for the MAC (from a phone or router
+    integration) comes first; devices heard right now show their signal strength.
+    """
+    devices = dr.async_get(hass)
+    coordinator = getattr(entry, "runtime_data", None)
+    heard = {c.mac: c for c in coordinator.data.clients} if coordinator and coordinator.data else {}
+    choices = []
+    for mac in macs:
+        # Several devices can share a MAC (one per integration). Our own are named after
+        # the MAC; the useful name belongs to another integration's device.
+        names = [
+            device.name_by_user or device.name
+            for device in devices.async_get_devices(connections={(CONNECTION_NETWORK_MAC, mac)})
+            if device.config_entry_id != entry.entry_id
+        ]
+        name = next((n for n in names if n and n != mac), None)
+        parts = [name, mac] if name else [mac]
+        if mac in heard:
+            parts.append(f"{heard[mac].rssi} dBm")
+        choices.append(SelectOptionDict(value=mac, label=" · ".join(parts)))
+    # devices heard right now first, strongest signal first, then the rest by address
+    choices.sort(key=lambda c: (c["value"] not in heard, -heard[c["value"]].rssi if c["value"] in heard else 0, c["value"]))
+    return choices
 
 
 def _defaults(country: str) -> dict[str, Any]:
@@ -327,19 +376,24 @@ class WifiPresenceConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class WifiPresenceOptionsFlow(OptionsFlow):
-    """Change the sensor's settings later. They are sent to it right away."""
+    """Change the sensor's settings and pick the devices to track."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Show and apply the settings."""
         entry = self.config_entry
         errors: dict[str, str] = {}
+        trackers = _known_trackers(self.hass, entry)
+        choices = _tracker_choices(self.hass, entry, sorted(trackers))
         current = options_from_config(
             config_from_options(entry.options, self.hass.config.country or "DE"),
             poll_interval_from_options(entry.options),
         )
+        current[CONF_TRACKED] = sorted(mac for mac, reg in trackers.items() if not reg.disabled_by)
         values = current
         if user_input is not None:
-            options, errors = _validate(_flatten(user_input))
+            flat = _flatten(user_input)
+            tracked = flat.pop(CONF_TRACKED, None)
+            options, errors = _validate(flat)
             if options is not None:
                 try:
                     await async_poll(
@@ -356,11 +410,24 @@ class WifiPresenceOptionsFlow(OptionsFlow):
                 except PollError:
                     errors["base"] = "cannot_connect"
                 else:
+                    if tracked is not None:
+                        self._apply_tracking(trackers, set(tracked))
                     return self.async_create_entry(data=options)
-            values = {**current, **_flatten(user_input)}
+            values = {**current, **flat, CONF_TRACKED: tracked if tracked is not None else current[CONF_TRACKED]}
 
         return self.async_show_form(
             step_id="init",
-            data_schema=_settings_schema(values),
+            data_schema=_settings_schema(values, choices),
             errors=errors,
         )
+
+    def _apply_tracking(self, trackers: dict[str, er.RegistryEntry], wanted: set[str]) -> None:
+        """Enable the chosen device trackers and disable the others."""
+        registry = er.async_get(self.hass)
+        for mac, reg in trackers.items():
+            if mac in wanted and reg.disabled_by:
+                registry.async_update_entity(reg.entity_id, disabled_by=None)
+            elif mac not in wanted and not reg.disabled_by:
+                registry.async_update_entity(
+                    reg.entity_id, disabled_by=er.RegistryEntryDisabler.USER
+                )

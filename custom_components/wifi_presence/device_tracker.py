@@ -10,7 +10,6 @@ from __future__ import annotations
 from homeassistant.components.device_tracker import ScannerEntity
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -61,8 +60,8 @@ class WifiClientTracker(CoordinatorEntity[WifiPresenceCoordinator], ScannerEntit
         self._unique_id = f"{entry.entry_id}_{mac}"
         self._attr_mac_address = mac
         self._attr_name = f"Wi-Fi {mac}"
-        # Lets HA attach the tracker to the device it already knows by this MAC.
-        self._attr_device_info = DeviceInfo(connections={(CONNECTION_NETWORK_MAC, mac)})
+        # No device_info on purpose: ScannerEntity manages the device itself and links the
+        # tracker to a device that another integration already registered for this MAC.
 
     @property
     def unique_id(self) -> str:

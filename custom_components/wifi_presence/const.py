@@ -19,6 +19,8 @@ CONF_MIN_FRAMES = "min_frames"
 CONF_MIN_RSSI = "min_rssi"
 # kept in Home Assistant only
 CONF_POLL_INTERVAL = "poll_interval_s"
+# not stored: the form field that enables and disables device trackers
+CONF_TRACKED = "tracked"
 SECTION_ADVANCED = "advanced"
 
 BAND_OPTIONS = {"both": 0, "2g": 1, "5g": 2}

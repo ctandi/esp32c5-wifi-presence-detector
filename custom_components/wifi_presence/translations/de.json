@@ -86,11 +86,13 @@
         "description": "Änderungen gehen sofort an den Sensor und bleiben auch nach einem Neustart erhalten.",
         "data": {
           "ssids": "WLAN-Netze (SSIDs)",
-          "country": "Ländercode"
+          "country": "Ländercode",
+          "tracked": "Zu verfolgende Geräte"
         },
         "data_description": {
           "ssids": "Geräte aller Access Points, die einen dieser Namen aussenden, werden erfasst. Nach jedem Namen Enter drücken. Bis zu 8.",
-          "country": "Zwei Buchstaben, zum Beispiel DE. Bestimmt, welche 5-GHz-Kanäle der Sensor abhören darf."
+          "country": "Zwei Buchstaben, zum Beispiel DE. Bestimmt, welche 5-GHz-Kanäle der Sensor abhören darf.",
+          "tracked": "Wählen Sie die Geräte, deren Anwesenheit Sie brauchen, zum Beispiel Ihr Handy. Jedes wird zu einem Gerätetracker, den Sie einer Person zuordnen können; die übrigen bleiben verborgen. Gerade gehörte Geräte stehen oben mit ihrer Signalstärke (Ihr Handy ist meist am stärksten, wenn es neben dem Sensor liegt). Neu gehörte Geräte erscheinen hier nach der nächsten Abfrage."
         },
         "sections": {
           "advanced": {

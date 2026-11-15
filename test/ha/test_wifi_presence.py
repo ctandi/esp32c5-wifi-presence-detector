@@ -22,7 +22,7 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_ADDRESS, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType, InvalidData
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import dt as dt_util
 
 from custom_components.wifi_presence.client import PollError
@@ -33,6 +33,7 @@ from custom_components.wifi_presence.const import (
     CONF_KEY,
     CONF_POLL_INTERVAL,
     CONF_SSIDS,
+    CONF_TRACKED,
     DOMAIN,
     SECTION_ADVANCED,
 )
@@ -512,6 +513,113 @@ async def test_options_flow_shows_current_values_and_pushes_changes(hass: HomeAs
     )
     # the polling period is a Home Assistant setting and took effect on the reload
     assert entry.runtime_data.update_interval == timedelta(seconds=20)
+
+
+# ---- picking the devices to track ----------------------------------------------------
+
+
+def _tracker_id(hass, entry, mac):
+    return er.async_get(hass).async_get_entity_id("device_tracker", DOMAIN, f"{entry.entry_id}_{mac}")
+
+
+def _tracked_field(result):
+    key = next(k for k in result["data_schema"].schema if k == CONF_TRACKED)
+    return key, result["data_schema"].schema[key]
+
+
+async def test_options_list_known_devices_and_enable_the_chosen_ones(hass: HomeAssistant) -> None:
+    entry = await _setup(hass, AsyncMock(return_value=_result(PHONE, TV)))
+    assert all(
+        er.async_get(hass).async_get(_tracker_id(hass, entry, m)).disabled_by for m in (PHONE, TV)
+    )
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    key, selector = _tracked_field(result)
+    assert key.default() == []  # nothing is tracked yet
+    assert {o["value"] for o in selector.config["options"]} == {PHONE, TV}
+    assert selector.config["multiple"] is True
+
+    push = AsyncMock(return_value=_result(PHONE, TV))
+    with patch("custom_components.wifi_presence.config_flow.async_poll", push), patch(
+        "custom_components.wifi_presence.coordinator.async_poll", push
+    ):
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"], _options_input(**{CONF_TRACKED: [PHONE]})
+        )
+        await hass.async_block_till_done()
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert CONF_TRACKED not in entry.options  # a one-off action, not a stored setting
+
+    registry = er.async_get(hass)
+    assert registry.async_get(_tracker_id(hass, entry, PHONE)).disabled_by is None
+    assert registry.async_get(_tracker_id(hass, entry, TV)).disabled_by is er.RegistryEntryDisabler.INTEGRATION
+    assert hass.states.get(_tracker_id(hass, entry, PHONE)).state == "home"  # and it shows up
+
+    # the form now shows the phone as tracked; un-ticking it disables the tracker again
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert _tracked_field(result)[0].default() == [PHONE]
+    with patch("custom_components.wifi_presence.config_flow.async_poll", push), patch(
+        "custom_components.wifi_presence.coordinator.async_poll", push
+    ):
+        await hass.config_entries.options.async_configure(
+            result["flow_id"], _options_input(**{CONF_TRACKED: []})
+        )
+        await hass.async_block_till_done()
+    assert registry.async_get(_tracker_id(hass, entry, PHONE)).disabled_by is er.RegistryEntryDisabler.USER
+
+
+async def test_a_tracker_enabled_in_the_entity_settings_shows_as_ticked(hass: HomeAssistant) -> None:
+    entry = await _setup(hass, AsyncMock(return_value=_result(PHONE, TV)))
+    er.async_get(hass).async_update_entity(_tracker_id(hass, entry, TV), disabled_by=None)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert _tracked_field(result)[0].default() == [TV]
+
+
+async def test_devices_are_labelled_with_the_name_home_assistant_knows(hass: HomeAssistant) -> None:
+    entry = _entry()
+    entry.add_to_hass(hass)
+    # a phone integration (another config entry) already registered this MAC under a name
+    phone_entry = MockConfigEntry(domain="mobile_app", title="Pixel")
+    phone_entry.add_to_hass(hass)
+    dr.async_get(hass).async_get_or_create(
+        config_entry_id=phone_entry.entry_id,
+        connections={(dr.CONNECTION_NETWORK_MAC, PHONE)},
+        name="Pixel 9",
+    )
+    with patch(
+        "custom_components.wifi_presence.coordinator.async_poll",
+        AsyncMock(return_value=SessionResult(
+            Report(uptime_s=1, ap_count=1, truncated=False, clients=(Client(PHONE, -42, 1), Client(TV, -80, 1))), False
+        )),
+    ):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    labels = {o["value"]: o["label"] for o in _tracked_field(result)[1].config["options"]}
+    assert labels[PHONE] == f"Pixel 9 \u00b7 {PHONE} \u00b7 -42 dBm"
+    assert labels[TV] == f"{TV} \u00b7 -80 dBm"
+    # and the phone's own device keeps its name: our tracker never renames it
+    assert [d.name for d in dr.async_entries_for_config_entry(dr.async_get(hass), phone_entry.entry_id)] == ["Pixel 9"]
+    # strongest signal first
+    assert [o["value"] for o in _tracked_field(result)[1].config["options"]] == [PHONE, TV]
+
+
+async def test_no_device_picker_before_any_device_was_heard(hass: HomeAssistant) -> None:
+    entry = await _setup(hass, AsyncMock(return_value=_result()))
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert CONF_TRACKED not in [k.schema for k in result["data_schema"].schema]
+
+
+async def test_a_failed_push_changes_nothing_about_the_trackers(hass: HomeAssistant) -> None:
+    entry = await _setup(hass, AsyncMock(return_value=_result(PHONE)))
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    with patch("custom_components.wifi_presence.config_flow.async_poll", AsyncMock(side_effect=PollError("gone"))):
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"], _options_input(**{CONF_TRACKED: [PHONE]})
+        )
+    assert result["errors"] == {"base": "cannot_connect"}
+    assert er.async_get(hass).async_get(_tracker_id(hass, entry, PHONE)).disabled_by is er.RegistryEntryDisabler.INTEGRATION
+    assert result["data_schema"].schema  # the form is shown again with the choice kept
+    assert _tracked_field(result)[0].default() == [PHONE]
 
 
 @pytest.mark.parametrize(
