@@ -16,6 +16,7 @@
 
 #include "frame_parse.h"
 #include "presence.h"
+#include "wp_led.h"
 #include "wp_store.h"
 
 static const char *TAG = "sniffer";
@@ -251,6 +252,7 @@ static void sniffer_cb(void *buf, wifi_promiscuous_pkt_type_t type)
         return; /* other network, or AP-to-AP traffic of a mesh */
     }
     wp_presence_seen(sta, pkt->rx_ctrl.rssi);
+    wp_led_activity();
 }
 
 /** Sniff for `seconds`, or until new settings arrive. Returns true in that case. */

@@ -10,6 +10,7 @@
 #include "wifi_sniffer.h"
 #include "wp_crypto.h"
 #include "wp_gatt.h"
+#include "wp_led.h"
 #include "wp_report.h"
 #include "wp_store.h"
 
@@ -89,6 +90,7 @@ void app_main(void)
 
     vTaskDelay(pdMS_TO_TICKS(1500)); /* let Bluetooth report its address */
     print_pairing();
+    wp_led_start(); /* everything is up: the LED now says "firmware is running" */
 
     static wp_client_info_t list[CONFIG_WP_MAX_DEVICES];
     uint32_t elapsed = 0;

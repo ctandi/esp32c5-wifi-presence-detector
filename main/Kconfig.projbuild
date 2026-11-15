@@ -21,6 +21,29 @@ menu "Wi-Fi Presence Sensor"
             Home Assistant connects, asks, disconnects within a few seconds.
             This stops a stranger from keeping the single connection busy.
 
+    config WP_LED_ENABLE
+        bool "Status LED"
+        default y
+        help
+            Slow blink while the firmware runs without Home Assistant, steady on
+            while Home Assistant is connected, a brief flash on activity.
+
+    config WP_LED_GPIO
+        int "Status LED GPIO"
+        depends on WP_LED_ENABLE
+        range 0 30
+        default 27
+        help
+            27 is the yellow user LED of the Seeed Studio XIAO ESP32-C5. The red
+            LED of that board is the battery charge indicator and cannot be driven.
+
+    config WP_LED_ACTIVE_LOW
+        bool "The LED lights when the pin is low"
+        depends on WP_LED_ENABLE
+        default y
+        help
+            True for the XIAO ESP32-C5 user LED according to Seeed's Arduino example.
+
     config WP_SELFTEST_KAT
         bool "Print a crypto known-answer vector at boot (for tests)"
         default n

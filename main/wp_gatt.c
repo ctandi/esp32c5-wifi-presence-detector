@@ -22,6 +22,7 @@
 #include "wifi_sniffer.h"
 #include "wp_config.h"
 #include "wp_crypto.h"
+#include "wp_led.h"
 #include "wp_report.h"
 #include "wp_store.h"
 
@@ -325,6 +326,7 @@ static void send_report(void)
     size_t count = 0;
     if (send_message(conn, s_msg, mlen, &count)) {
         ESP_LOGI(TAG, "sent %u client(s) in %u fragment(s)", (unsigned)n, (unsigned)count);
+        wp_led_poll_done();
     }
 }
 
@@ -391,6 +393,7 @@ static void handle_command(void)
     size_t count = 0;
     if (send_message(conn, s_msg, WP_CMSG_OVERHEAD + sizeof(ack), &count)) {
         ESP_LOGI(TAG, "command 0x%02x handled, status %u", plain[0], status);
+        wp_led_activity();
     }
 }
 

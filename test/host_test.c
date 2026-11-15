@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "../main/wp_config.h"
+#include "../main/wp_led_logic.h"
 #include "../main/wp_report.h"
 #include "../main/frame_parse.h"
 
@@ -284,6 +285,55 @@ static void test_config(void)
     assert(n == WP_CFG_BLOB_MAX && wp_config_decode(blob, n, &d));
 }
 
+static void test_led(void)
+{
+    /* how long a poll counts as "Home Assistant is connected" */
+    assert(wp_led_alive_window(0) == WP_LED_ALIVE_MIN_MS);
+    assert(wp_led_alive_window(30000) == WP_LED_ALIVE_MIN_MS);     /* 2.5 x 30 s = 75 s < 90 s */
+    assert(wp_led_alive_window(60000) == 150000);
+    assert(wp_led_alive_window(300000) == 750000);                 /* a slow polling period is covered */
+    assert(wp_led_alive_window(10000000) == WP_LED_ALIVE_MAX_MS);
+    assert(wp_led_alive_window(0xFFFFFFFFu) == WP_LED_ALIVE_MAX_MS); /* no overflow */
+
+    /* mode: off until running; connected needs pairing AND a fresh poll */
+    assert(wp_led_mode(false, true, true, 1000, 900, 30000) == WP_LED_OFF);
+    assert(wp_led_mode(true, false, true, 1000, 900, 30000) == WP_LED_WAITING);   /* not paired */
+    assert(wp_led_mode(true, true, false, 1000, 0, 30000) == WP_LED_WAITING);     /* never polled */
+    assert(wp_led_mode(true, true, true, 1000, 900, 30000) == WP_LED_CONNECTED);
+    assert(wp_led_mode(true, true, true, 90000 + 899, 900, 0) == WP_LED_CONNECTED);   /* just inside */
+    assert(wp_led_mode(true, true, true, 90000 + 900, 900, 0) == WP_LED_WAITING);     /* exactly at the limit */
+    assert(wp_led_mode(true, true, true, 700000, 900, 300000) == WP_LED_CONNECTED);   /* 300 s polling */
+    /* the clock wraps every 49 days: differences must survive it */
+    assert(wp_led_mode(true, true, true, 5000, 0xFFFFFF00u, 30000) == WP_LED_CONNECTED);
+    assert(wp_led_mode(true, true, true, 200000, 0xFFFFFF00u, 30000) == WP_LED_WAITING);
+
+    /* level: off, 1 Hz blink, steady */
+    assert(!wp_led_level(WP_LED_OFF, 123, 0, false));
+    for (uint32_t t = 0; t < 5000; t += 50) {
+        assert(wp_led_level(WP_LED_WAITING, t, 0, false) == ((t % 1000) < 500));
+        assert(wp_led_level(WP_LED_CONNECTED, t, 0, false));   /* no activity: steady on */
+    }
+    /* an activity flash: off for WP_LED_PULSE_MS, then on again */
+    assert(!wp_led_level(WP_LED_CONNECTED, 10000, 10000, true));
+    assert(!wp_led_level(WP_LED_CONNECTED, 10000 + WP_LED_PULSE_MS - 1, 10000, true));
+    assert(wp_led_level(WP_LED_CONNECTED, 10000 + WP_LED_PULSE_MS, 10000, true));
+    assert(!wp_led_level(WP_LED_CONNECTED, 20, 0xFFFFFFF0u, true));        /* flash started before the wrap */
+    assert(wp_led_level(WP_LED_CONNECTED, 200, 0xFFFFFFF0u, true));
+    assert(wp_led_level(WP_LED_CONNECTED, 3, 3, false));                   /* a stale timestamp means nothing */
+    /* while waiting, the blink pattern is not disturbed by activity */
+    assert(wp_led_level(WP_LED_WAITING, 100, 100, true));
+    assert(!wp_led_level(WP_LED_WAITING, 600, 600, true));
+
+    /* flashes are rate limited, so heavy Wi-Fi traffic cannot make the LED flicker */
+    assert(wp_led_pulse_allowed(5, 0, false));
+    assert(!wp_led_pulse_allowed(1000 + WP_LED_PULSE_GAP_MS - 1, 1000, true));
+    assert(wp_led_pulse_allowed(1000 + WP_LED_PULSE_GAP_MS, 1000, true));
+    assert(wp_led_pulse_allowed(300, 0xFFFFFF00u, true));                  /* across the wrap */
+    assert(!wp_led_pulse_allowed(100, 0xFFFFFF00u, true));
+    /* dark time is bounded: at most PULSE_MS of every PULSE_GAP_MS while connected */
+    assert(WP_LED_PULSE_MS * 4 < WP_LED_PULSE_GAP_MS * 1);
+}
+
 int main(void)
 {
     test_frames();
@@ -293,6 +343,7 @@ int main(void)
     test_fragments();
     test_reassembler();
     test_config();
+    test_led();
     puts("all host tests passed");
     return 0;
 }

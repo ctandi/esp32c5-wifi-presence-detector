@@ -70,6 +70,8 @@ Discovered*, or start the setup with
   heard. Either **track all devices automatically** (one switch), or keep them hidden and
   pick yours in the *Configure* dialog, *Devices to track*, which lists everything heard
   (with the names Home Assistant already knows, and signal strength). Put your phone's on a Person.
+- A status LED (the yellow one on the XIAO ESP32-C5): slow blink while it waits for Home
+  Assistant, steady when connected, a flash on activity.
 - A sensor you can name (for example *Wi-Fi presence living room*), so several sensors stay apart.
 - Settings in Home Assistant: the Wi-Fi names to watch (several allowed), country, bands,
   scan time per channel, how long a sleeping phone stays "home", minimum signal strength and

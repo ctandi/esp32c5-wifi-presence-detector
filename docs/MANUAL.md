@@ -168,6 +168,30 @@ deliberately slower: a phone that is asleep talks rarely, so the sensor waits 5 
 (*Keep a device present for*) before it believes the phone has left. Together with the
 polling this means "away" after 5 to 5½ minutes. Both numbers are settings.
 
+## The status LED
+
+On the Seeed XIAO ESP32-C5 the **yellow** LED shows what the sensor is doing:
+
+| What you see | What it means |
+|--------------|---------------|
+| Dark | The sensor is starting, or has no power |
+| **Slow blink** (once a second) | The firmware is running, but Home Assistant is not connected: not paired yet, or Home Assistant has not polled for a while |
+| **Steady on** | Home Assistant is connected: it polled recently |
+| **Short flash** (the LED goes dark for a moment) | Activity: an exchange with Home Assistant, or Wi-Fi traffic of your network being heard (at most a few flashes per second) |
+
+"Recently" means within two and a half times Home Assistant's polling period (at least 90
+seconds), so a slow polling period does not make the LED blink between polls. If Home
+Assistant stops polling, the LED goes back to the slow blink after that time.
+
+The **red** LED of the XIAO ESP32-C5 is the battery-charge indicator. It is wired to the
+charger chip, not to a pin, so the firmware cannot switch it. It only lights while a
+battery is charging.
+
+If the LED is inverted (lit while it should be dark), or you want it off, change it when
+building the firmware (`idf.py menuconfig` → *Wi-Fi Presence Sensor*: *Status LED*, its pin
+and its polarity). The web-flasher build uses the XIAO ESP32-C5's yellow LED on GPIO27, lit
+when the pin is low.
+
 ## Settings reference
 
 Open them with *Settings → Devices & services → Wi-Fi Presence Sensor → Configure*. Changes
