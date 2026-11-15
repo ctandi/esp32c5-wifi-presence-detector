@@ -13,6 +13,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .const import CONF_TRACK_ALL
 from .coordinator import WifiPresenceConfigEntry, WifiPresenceCoordinator
 
 
@@ -59,9 +60,14 @@ class WifiClientTracker(CoordinatorEntity[WifiPresenceCoordinator], ScannerEntit
         self._mac = mac
         self._unique_id = f"{entry.entry_id}_{mac}"
         self._attr_mac_address = mac
-        self._attr_name = f"Wi-Fi {mac}"
+        self._attr_name = f"Wi-Fi presence {mac}"
         # No device_info on purpose: ScannerEntity manages the device itself and links the
         # tracker to a device that another integration already registered for this MAC.
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Start enabled only if the user asked to track every device."""
+        return bool(self.coordinator.config_entry.options.get(CONF_TRACK_ALL, False))
 
     @property
     def unique_id(self) -> str:

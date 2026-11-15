@@ -19,7 +19,7 @@ from pytest_homeassistant_custom_component.common import (
 
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_ADDRESS, STATE_UNAVAILABLE
+from homeassistant.const import CONF_ADDRESS, CONF_NAME, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType, InvalidData
 from homeassistant.helpers import device_registry as dr, entity_registry as er
@@ -33,6 +33,7 @@ from custom_components.wifi_presence.const import (
     CONF_KEY,
     CONF_POLL_INTERVAL,
     CONF_SSIDS,
+    CONF_TRACK_ALL,
     CONF_TRACKED,
     DOMAIN,
     SECTION_ADVANCED,
@@ -167,7 +168,7 @@ async def test_flow_key_then_settings_creates_entry_and_pairs(hass: HomeAssistan
             ),
         )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Wi-Fi presence 22:33"  # tail of the address
+    assert result["title"] == f"Wi-Fi presence {ADDRESS}"  # the full address, as printed by the sensor
     assert result["data"] == {CONF_ADDRESS: ADDRESS, CONF_KEY: KEY}  # key normalised
     assert result["result"].unique_id == ADDRESS
     # cleaned up: trimmed, de-duplicated, upper-case country; defaults for the rest
@@ -652,3 +653,159 @@ async def test_unload(hass: HomeAssistant) -> None:
     entry = await _setup(hass, AsyncMock(return_value=_result(PHONE)))
     assert await hass.config_entries.async_unload(entry.entry_id)
     assert entry.state is ConfigEntryState.NOT_LOADED
+
+
+# ---- naming, tracking everything, and the cleanup of old devices --------------------------
+
+
+async def test_the_sensor_can_be_named_when_pairing(hass: HomeAssistant) -> None:
+    result = await _to_settings(hass)
+    with patch(
+        "custom_components.wifi_presence.config_flow.async_poll", AsyncMock(return_value=_result(applied=True))
+    ), patch("custom_components.wifi_presence.async_setup_entry", return_value=True):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], _settings_input(**{CONF_NAME: "  Wi-Fi presence living room "})
+        )
+    assert result["title"] == "Wi-Fi presence living room"
+    assert CONF_NAME not in result["options"]  # the title is not a setting of the sensor
+
+
+async def test_an_empty_name_falls_back_to_the_address(hass: HomeAssistant) -> None:
+    result = await _to_settings(hass)
+    default = next(k for k in result["data_schema"].schema if k == CONF_NAME).default()
+    assert default == f"Wi-Fi presence {ADDRESS}"
+    with patch(
+        "custom_components.wifi_presence.config_flow.async_poll", AsyncMock(return_value=_result(applied=True))
+    ), patch("custom_components.wifi_presence.async_setup_entry", return_value=True):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], _settings_input(**{CONF_NAME: "   "})
+        )
+    assert result["title"] == f"Wi-Fi presence {ADDRESS}"
+
+
+async def test_the_sensor_can_be_renamed_later(hass: HomeAssistant) -> None:
+    entry = await _setup(hass, AsyncMock(return_value=_result(PHONE)))
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert next(k for k in result["data_schema"].schema if k == CONF_NAME).default() == "WiFi Presence"
+    push = AsyncMock(return_value=_result(PHONE))
+    with patch("custom_components.wifi_presence.config_flow.async_poll", push), patch(
+        "custom_components.wifi_presence.coordinator.async_poll", push
+    ):
+        await hass.config_entries.options.async_configure(
+            result["flow_id"], _options_input(**{CONF_NAME: "Attic sensor"})
+        )
+        await hass.async_block_till_done()
+    assert entry.title == "Attic sensor"
+    assert CONF_NAME not in entry.options
+    names = {d.name for d in dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)}
+    assert "Attic sensor" in names  # the sensor's device follows
+
+
+async def test_trackers_are_named_after_the_detected_device(hass: HomeAssistant) -> None:
+    entry = await _setup(hass, AsyncMock(return_value=_result(PHONE, TV)))
+    registry = er.async_get(hass)
+    assert registry.async_get(_tracker_id(hass, entry, PHONE)).original_name == f"Wi-Fi presence {PHONE}"
+    assert registry.async_get(_tracker_id(hass, entry, TV)).original_name == f"Wi-Fi presence {TV}"
+    assert _tracker_id(hass, entry, PHONE).endswith(PHONE.replace(":", "_"))  # and the id says so too
+
+
+async def test_trackers_do_not_get_devices_of_their_own(hass: HomeAssistant) -> None:
+    entry = await _setup(hass, AsyncMock(return_value=_result(PHONE, TV)))
+    devices = dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
+    assert [d.name for d in devices] == ["WiFi Presence"]  # only the sensor itself
+
+
+async def test_track_all_enables_every_new_tracker_from_the_start(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id=ADDRESS, title="WiFi Presence",
+        data={CONF_ADDRESS: ADDRESS, CONF_KEY: KEY},
+        options={**options_from_config(Config(ssids=("MyNet",)), 30), CONF_TRACK_ALL: True},
+    )
+    entry.add_to_hass(hass)
+    with patch("custom_components.wifi_presence.coordinator.async_poll", AsyncMock(return_value=_result(PHONE, TV))):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    registry = er.async_get(hass)
+    assert all(registry.async_get(_tracker_id(hass, entry, m)).disabled_by is None for m in (PHONE, TV))
+    assert hass.states.get(_tracker_id(hass, entry, PHONE)).state == "home"
+
+
+async def test_without_track_all_new_trackers_stay_hidden(hass: HomeAssistant) -> None:
+    entry = await _setup(hass, AsyncMock(return_value=_result(PHONE)))
+    assert entry.options.get(CONF_TRACK_ALL, False) is False
+    assert er.async_get(hass).async_get(_tracker_id(hass, entry, PHONE)).disabled_by is er.RegistryEntryDisabler.INTEGRATION
+
+
+async def test_turning_on_track_all_enables_the_hidden_ones_but_respects_exclusions(hass: HomeAssistant) -> None:
+    entry = await _setup(hass, AsyncMock(return_value=_result(PHONE, TV, "aa:bb:cc:dd:ee:03")))
+    registry = er.async_get(hass)
+    skipped = _tracker_id(hass, entry, TV)
+    registry.async_update_entity(skipped, disabled_by=er.RegistryEntryDisabler.USER)  # the user excluded the TV
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    push = AsyncMock(return_value=_result(PHONE, TV, "aa:bb:cc:dd:ee:03"))
+    with patch("custom_components.wifi_presence.config_flow.async_poll", push), patch(
+        "custom_components.wifi_presence.coordinator.async_poll", push
+    ):
+        await hass.config_entries.options.async_configure(
+            result["flow_id"], _options_input(**{CONF_TRACK_ALL: True})
+        )
+        await hass.async_block_till_done()
+    assert entry.options[CONF_TRACK_ALL] is True
+    assert registry.async_get(_tracker_id(hass, entry, PHONE)).disabled_by is None
+    assert registry.async_get(_tracker_id(hass, entry, "aa:bb:cc:dd:ee:03")).disabled_by is None
+    assert registry.async_get(skipped).disabled_by is er.RegistryEntryDisabler.USER  # still excluded
+
+
+async def test_with_track_all_a_device_is_excluded_by_unticking_it(hass: HomeAssistant) -> None:
+    entry = await _setup(hass, AsyncMock(return_value=_result(PHONE, TV)))
+    registry = er.async_get(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    push = AsyncMock(return_value=_result(PHONE, TV))
+    with patch("custom_components.wifi_presence.config_flow.async_poll", push), patch(
+        "custom_components.wifi_presence.coordinator.async_poll", push
+    ):
+        await hass.config_entries.options.async_configure(result["flow_id"], _options_input(**{CONF_TRACK_ALL: True}))
+        await hass.async_block_till_done()
+        assert all(registry.async_get(_tracker_id(hass, entry, m)).disabled_by is None for m in (PHONE, TV))
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        assert _tracked_field(result)[0].default() == [PHONE, TV]  # everything ticked
+        await hass.config_entries.options.async_configure(
+            result["flow_id"], _options_input(**{CONF_TRACK_ALL: True, CONF_TRACKED: [PHONE]})
+        )
+        await hass.async_block_till_done()
+    assert registry.async_get(_tracker_id(hass, entry, PHONE)).disabled_by is None
+    assert registry.async_get(_tracker_id(hass, entry, TV)).disabled_by is er.RegistryEntryDisabler.USER
+
+
+async def test_old_per_client_devices_are_cleaned_up_on_start(hass: HomeAssistant) -> None:
+    entry = _entry()
+    entry.add_to_hass(hass)
+    devices, entities = dr.async_get(hass), er.async_get(hass)
+    # what versions before 1.1.0 left behind: a device per client, named like the sensor
+    legacy = devices.async_get_or_create(
+        config_entry_id=entry.entry_id, connections={(dr.CONNECTION_NETWORK_MAC, PHONE)}, name=entry.title
+    )
+    tracker = entities.async_get_or_create(
+        "device_tracker", DOMAIN, f"{entry.entry_id}_{PHONE}", config_entry=entry, device_id=legacy.id,
+        disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+    )
+    # things that must survive: someone else's device for another MAC, and a device the user renamed
+    phone_entry = MockConfigEntry(domain="mobile_app")
+    phone_entry.add_to_hass(hass)
+    others = devices.async_get_or_create(
+        config_entry_id=phone_entry.entry_id, connections={(dr.CONNECTION_NETWORK_MAC, TV)}, name=entry.title
+    )
+    renamed = devices.async_get_or_create(
+        config_entry_id=entry.entry_id, connections={(dr.CONNECTION_NETWORK_MAC, "aa:bb:cc:dd:ee:09")}, name="Kitchen radio"
+    )
+
+    with patch("custom_components.wifi_presence.coordinator.async_poll", AsyncMock(return_value=_result(PHONE))):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+
+    names = sorted(d.name for d in dr.async_entries_for_config_entry(devices, entry.entry_id))
+    assert names == ["Kitchen radio", "WiFi Presence"]  # the stray device is gone, the sensor stays
+    assert devices.async_get(others.id) is not None and devices.async_get(renamed.id) is not None
+    kept = entities.async_get(tracker.entity_id)
+    assert kept is not None and kept.device_id is None and kept.unique_id == f"{entry.entry_id}_{PHONE}"

@@ -91,14 +91,16 @@ repository into the `custom_components` folder of your Home Assistant configurat
 ## 3. Pair the sensor
 
 1. Open *Settings → Devices & services*. The sensor appears under **Discovered** as
-   *Wi-Fi presence 22:33* (the end of the Bluetooth address printed in the box). Click
-   *Add*. If it does not appear, use *Add integration → Wi-Fi Presence Sensor*
+   *Wi-Fi presence AA:BB:CC:11:22:33*: the **full Bluetooth address** printed in the box, so
+   several sensors can be told apart. Click *Add*. If it does not appear, use *Add integration → Wi-Fi Presence Sensor*
    ([shortcut](https://my.home-assistant.io/redirect/config_flow_start/?domain=wifi_presence)).
 2. Paste the **key** and continue. Home Assistant connects once to check the key.
-3. Enter **the name of your Wi-Fi** (the SSID). Add more than one if you have several
+3. Give the sensor a **name** (for example *Wi-Fi presence living room*; the default is its
+   address) and enter **the name of your Wi-Fi** (the SSID). Add more than one if you have several
    networks or a guest network. Press Enter after each name. The country code is filled
-   in from your Home Assistant setting. Everything under *Advanced settings* can stay as
-   it is; see [Settings](#settings-reference).
+   in from your Home Assistant setting. *Track all devices automatically* is explained in
+   [Use it](#4-use-it). Everything under *Advanced settings* can stay as it is; see
+   [Settings](#settings-reference).
 4. Submit. Home Assistant sends the settings to the sensor over Bluetooth, and the sensor
    starts scanning at once. This also completes the pairing: the sensor stops repeating
    the key.
@@ -114,10 +116,20 @@ You get three sensors and, for every Wi-Fi client the sensor has heard, a device
 | *Clients present* | Number of devices currently connected to your Wi-Fi. The attribute `clients` lists them with signal strength. |
 | *Access points watched* | How many of your access points (counting every band and mesh node) the sensor found. `0` means it has not found your Wi-Fi yet. |
 | *Sensor uptime* | Seconds since the sensor started. |
-| *Wi-Fi aa:bb:cc:dd:ee:ff* (tracker) | `home` while that device is on your Wi-Fi, otherwise `not_home`. |
+| *Wi-Fi presence aa:bb:cc:dd:ee:ff* (tracker) | One per device, named after the **device's** address. `home` while that device is on your Wi-Fi, otherwise `not_home`. |
 
-**Choose the devices to track.** A home network is full of TVs, plugs and lamps, so the
-trackers start hidden (disabled) and only the ones you pick show up:
+**Track everything, or choose.** A home network is full of TVs, plugs and lamps, so by
+default the trackers start hidden (disabled) and only the ones you pick show up. If you
+would rather have all of them:
+
+- **Track all devices automatically** (*Configure*, or in the pairing dialog): every device
+  the sensor hears gets an enabled tracker at once, and so does every device it hears in
+  the future. Turning it on also enables the trackers that are only hidden by default. A
+  tracker you switched off yourself stays off, so a single device can still be excluded
+  (un-tick it in *Devices to track*, or disable the entity). Turning it off again leaves the
+  trackers as they are; only new devices start hidden again.
+
+To pick devices one by one:
 
 1. Open *Settings → Devices & services → Wi-Fi Presence Sensor → Configure*.
 2. In **Devices to track**, open the list. It shows every device the sensor has heard, the
@@ -134,6 +146,17 @@ trackers start hidden (disabled) and only the ones you pick show up:
 The list fills as the sensor hears devices, so a new phone shows up here after the next
 check (30 seconds); open *Configure* again to add it. You can also enable or disable single
 trackers in the usual entity settings; the list reflects that.
+
+**Where to find them.** The integration page (*Settings → Devices & services → Wi-Fi
+Presence Sensor*) lists the sensor as one device. The trackers are entities named *Wi-Fi
+presence* plus the address of the device they follow, so searching *Settings → Entities*
+for an address (or for *Wi-Fi presence*) finds them; use the *Entities* tab of the
+integration, with disabled entities shown, to see all of them. If another integration
+already knows a device by that address (a phone with the companion app, a router entry), Home
+Assistant gives the tracker a small device of its own, named after the address; that is
+why a few such entries can appear on the integration page. Older versions (before 1.1.0)
+created a device per client, all named like the sensor; the integration removes those when
+it starts.
 
 Phones usually use a *private* Wi-Fi address per network. That address stays the same for
 that network, so it works. If you set the phone to "rotate" the address, it looks like a
@@ -153,8 +176,10 @@ Home Assistant says so and keeps your old settings, so the two never disagree.
 
 | Setting | Default | Range | What it does |
 |---------|---------|-------|--------------|
+| **Name** | *Wi-Fi presence* and the sensor's address | any text | What the sensor is called in Home Assistant (its device and entities). Rename it any time. |
 | **Wi-Fi networks (SSIDs)** | none | 1 to 8 names | Devices of every access point announcing one of these names are tracked. The names are case-sensitive. Hidden networks cannot be found. |
 | **Country code** | your HA country | 2 letters | Which 5 GHz channels the sensor may listen on. Use your real country. |
+| **Track all devices automatically** | off | on / off | Enables the tracker of every device the sensor hears, now and in the future. See [Use it](#4-use-it). |
 | *Frequency bands* | 2.4 and 5 GHz | both / 2.4 only / 5 only | Where to search for your network. If your Wi-Fi lives on one band only, choosing it makes the search faster. |
 | *Search time per channel* | 200 ms | 120 to 1500 | How long the sensor listens on each channel while looking for your access points. Must be longer than one beacon (about 100 ms). Raise it if a weak access point is not found; it makes each search slower. |
 | *Listening time per channel* | 2000 ms | 200 to 30000 | When your access points are on several channels (2.4 and 5 GHz, mesh nodes) the sensor hops between them. This is how long it stays on one. Short hops cover all channels more evenly; long hops catch more of one channel. |

@@ -17,12 +17,13 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_ADDRESS
+from homeassistant.const import CONF_ADDRESS, CONF_NAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import section
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -47,6 +48,7 @@ from .const import (
     CONF_RESCAN,
     CONF_SCAN_DWELL,
     CONF_SSIDS,
+    CONF_TRACK_ALL,
     CONF_TRACKED,
     DEFAULT_POLL_INTERVAL,
     DOMAIN,
@@ -72,12 +74,19 @@ from .settings import config_from_options, options_from_config, poll_interval_fr
 
 
 def _title(address: str) -> str:
-    """Name a sensor by the tail of its address.
+    """Default name of a sensor: its full Bluetooth address.
 
     The Bluetooth name sits in the scan response, which proxies often do not
-    pass on, so Home Assistant may only know the address.
+    pass on, so Home Assistant may only know the address. The full address is the
+    one the sensor prints in its pairing box, so sensors can be told apart. The
+    user can give it a better name when pairing and later in Configure.
     """
-    return f"Wi-Fi presence {address[-5:]}"
+    return f"Wi-Fi presence {address}"
+
+
+def _take_name(flat: dict[str, Any], default: str) -> str:
+    """Remove the name from the form values; an empty name means the default."""
+    return str(flat.pop(CONF_NAME, "") or "").strip() or default
 
 
 def _number(rng: tuple[int, int], unit: str | None = None) -> NumberSelector:
@@ -88,7 +97,9 @@ def _number(rng: tuple[int, int], unit: str | None = None) -> NumberSelector:
 
 
 def _settings_schema(
-    values: Mapping[str, Any], tracker_choices: list[SelectOptionDict] | None = None
+    values: Mapping[str, Any],
+    tracker_choices: list[SelectOptionDict] | None = None,
+    default_name: str = "Wi-Fi presence",
 ) -> vol.Schema:
     """The settings form: the essentials up front, the tuning folded away."""
     advanced = vol.Schema(
@@ -116,10 +127,14 @@ def _settings_schema(
         }
     )
     fields: dict[Any, Any] = {
+        vol.Required(CONF_NAME, default=values.get(CONF_NAME, default_name)): TextSelector(),
         vol.Required(CONF_SSIDS, default=values[CONF_SSIDS]): TextSelector(
             TextSelectorConfig(multiple=True)
         ),
         vol.Required(CONF_COUNTRY, default=values[CONF_COUNTRY]): TextSelector(),
+        vol.Required(
+            CONF_TRACK_ALL, default=values.get(CONF_TRACK_ALL, False)
+        ): BooleanSelector(),
     }
     if tracker_choices:  # only once the sensor has heard devices
         fields[vol.Optional(CONF_TRACKED, default=values.get(CONF_TRACKED, []))] = SelectSelector(
@@ -308,7 +323,9 @@ class WifiPresenceConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         values = _defaults(self.hass.config.country or "DE")
         if user_input is not None:
-            options, errors = _validate(_flatten(user_input))
+            flat = _flatten(user_input)
+            name = _take_name(flat, self._name)
+            options, errors = _validate(flat)
             if options is not None:
                 assert self._address is not None and self._key is not None
                 try:
@@ -328,7 +345,7 @@ class WifiPresenceConfigFlow(ConfigFlow, domain=DOMAIN):
                     errors["base"] = "cannot_connect"
                 else:
                     return self.async_create_entry(
-                        title=self._name,
+                        title=name,
                         data={CONF_ADDRESS: self._address, CONF_KEY: self._key.hex()},
                         options=options,
                     )
@@ -336,7 +353,7 @@ class WifiPresenceConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="settings",
-            data_schema=_settings_schema(values),
+            data_schema=_settings_schema(values, default_name=self._name),
             errors=errors,
         )
 
@@ -376,7 +393,7 @@ class WifiPresenceConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class WifiPresenceOptionsFlow(OptionsFlow):
-    """Change the sensor's settings and pick the devices to track."""
+    """Change the sensor's name and settings, and pick the devices to track."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Show and apply the settings."""
@@ -388,10 +405,13 @@ class WifiPresenceOptionsFlow(OptionsFlow):
             config_from_options(entry.options, self.hass.config.country or "DE"),
             poll_interval_from_options(entry.options),
         )
+        current[CONF_NAME] = entry.title
+        current[CONF_TRACK_ALL] = bool(entry.options.get(CONF_TRACK_ALL, False))
         current[CONF_TRACKED] = sorted(mac for mac, reg in trackers.items() if not reg.disabled_by)
         values = current
         if user_input is not None:
             flat = _flatten(user_input)
+            name = _take_name(flat, entry.title)
             tracked = flat.pop(CONF_TRACKED, None)
             options, errors = _validate(flat)
             if options is not None:
@@ -410,24 +430,45 @@ class WifiPresenceOptionsFlow(OptionsFlow):
                 except PollError:
                     errors["base"] = "cannot_connect"
                 else:
-                    if tracked is not None:
-                        self._apply_tracking(trackers, set(tracked))
+                    self._apply_tracking(
+                        trackers, None if tracked is None else set(tracked), options[CONF_TRACK_ALL]
+                    )
+                    if name != entry.title:
+                        self.hass.config_entries.async_update_entry(entry, title=name)
                     return self.async_create_entry(data=options)
-            values = {**current, **flat, CONF_TRACKED: tracked if tracked is not None else current[CONF_TRACKED]}
+            values = {
+                **current,
+                **flat,
+                CONF_NAME: name,
+                CONF_TRACKED: tracked if tracked is not None else current[CONF_TRACKED],
+            }
 
         return self.async_show_form(
             step_id="init",
-            data_schema=_settings_schema(values, choices),
+            data_schema=_settings_schema(values, choices, entry.title),
             errors=errors,
         )
 
-    def _apply_tracking(self, trackers: dict[str, er.RegistryEntry], wanted: set[str]) -> None:
-        """Enable the chosen device trackers and disable the others."""
+    def _apply_tracking(
+        self, trackers: dict[str, er.RegistryEntry], wanted: set[str] | None, track_all: bool
+    ) -> None:
+        """Enable the chosen device trackers, disable the others, honour "track all".
+
+        With "track all" on, every tracker that was only hidden by default is enabled.
+        A tracker the user switched off (in the list or in the entity settings) stays
+        off: that is how a single device is excluded.
+        """
         registry = er.async_get(self.hass)
-        for mac, reg in trackers.items():
-            if mac in wanted and reg.disabled_by:
-                registry.async_update_entity(reg.entity_id, disabled_by=None)
-            elif mac not in wanted and not reg.disabled_by:
-                registry.async_update_entity(
-                    reg.entity_id, disabled_by=er.RegistryEntryDisabler.USER
-                )
+        if wanted is not None:
+            for mac, reg in trackers.items():
+                if mac in wanted and reg.disabled_by:
+                    registry.async_update_entity(reg.entity_id, disabled_by=None)
+                elif mac not in wanted and not reg.disabled_by:
+                    registry.async_update_entity(
+                        reg.entity_id, disabled_by=er.RegistryEntryDisabler.USER
+                    )
+        if track_all:
+            for reg in trackers.values():
+                now = registry.async_get(reg.entity_id)
+                if now and now.disabled_by is er.RegistryEntryDisabler.INTEGRATION:
+                    registry.async_update_entity(reg.entity_id, disabled_by=None)
