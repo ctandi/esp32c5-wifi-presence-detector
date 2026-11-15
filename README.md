@@ -1,5 +1,7 @@
 # Wi-Fi Presence Sensor for Home Assistant
 
+[![Build](https://github.com/ctandi/esp32c5-wifi-presence-detector/actions/workflows/build.yml/badge.svg)](https://github.com/ctandi/esp32c5-wifi-presence-detector/actions/workflows/build.yml) [![Validate](https://github.com/ctandi/esp32c5-wifi-presence-detector/actions/workflows/validate.yml/badge.svg)](https://github.com/ctandi/esp32c5-wifi-presence-detector/actions/workflows/validate.yml)
+
 An **ESP32-C5** that listens to your Wi-Fi and tells Home Assistant which devices are
 connected: **no router access, no pinging, no allow-list.** The sensor never joins your
 network, so it can listen continuously, on 2.4 GHz and 5 GHz. It reports over Bluetooth,
@@ -17,8 +19,8 @@ your Wi-Fi ──► ESP32-C5 (listens only) ──► encrypted Bluetooth ─�
 1. **Flash it from your browser:** open **https://ctandi.github.io/esp32c5-wifi-presence-detector/**,
    plug in the ESP32-C5, click *Install firmware*, then *Logs & Console*. The sensor prints
    its **pairing key**: copy it.
-2. **Install the integration** (HACS custom repository, or copy `custom_components/wifi_presence`
-   to your Home Assistant) and restart.
+2. **Install the integration** from the Home Assistant Marketplace (one click, see
+   [below](#install-the-home-assistant-integration)).
 3. **Add it:** the sensor appears under *Settings → Devices & services → Discovered*. Paste
    the key, enter the name of your Wi-Fi. Done.
 
@@ -26,6 +28,40 @@ You never touch the sensor again: the Wi-Fi names, scan times and everything els
 settings in Home Assistant.
 
 **→ Step by step: [docs/MANUAL.md](docs/MANUAL.md)**
+
+## Install the Home Assistant integration
+
+The integration is a community repository, so it is installed through the Marketplace
+(*Settings → Marketplace*, built into Home Assistant 2026.11 and newer) by adding this
+repository once. Nothing is copied by hand, and the Marketplace tells you when updates arrive.
+
+[![Open your Home Assistant instance and show the repository in the Marketplace.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ctandi&repository=esp32c5-wifi-presence-detector&category=integration)
+
+Or step by step, **Home Assistant 2026.11 or newer (Marketplace):**
+
+1. Open *Settings → Marketplace*. The first time, read and accept the warning (everything in
+   the Marketplace is community-made and untested by the Home Assistant project; this
+   project's code is open for you to read).
+2. Select *Add from link* in the upper-right corner and enter
+   `https://github.com/ctandi/esp32c5-wifi-presence-detector` (or just
+   `ctandi/esp32c5-wifi-presence-detector`), then *Add*. If you have not connected GitHub
+   yet, the Marketplace asks you to do so now (it shows a code that you enter on github.com;
+   it gets no access to private repositories and cannot change anything); this is only
+   needed for adding custom repositories and for update checks. If asked for the type, choose *Integration*.
+3. Open the repository's page and select *Install*, then confirm.
+4. The setup page of the integration opens if Home Assistant can load it right away. If it
+   asks for a restart instead, a repair under *Settings → System → Repairs* offers it.
+
+**Home Assistant 2026.10 or older (HACS):** in HACS use ⋮ → *Custom repositories*, add the
+same URL with the type *Integration*, download *Wi-Fi Presence Sensor*, and restart
+Home Assistant.
+
+**Manually:** copy the folder `custom_components/wifi_presence` of this repository into
+the `custom_components` folder of your Home Assistant configuration and restart.
+
+Then continue with step 3 above: the sensor appears under *Settings → Devices & services →
+Discovered*, or start the setup with
+[![Add integration](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=wifi_presence).
 
 ## What you get
 
@@ -90,10 +126,12 @@ flasher loads [ESP Web Tools](https://esphome.github.io/esp-web-tools/) (Apache-
 | Path | What |
 |------|------|
 | `main/` | ESP32-C5 firmware (ESP-IDF, NimBLE, Wi-Fi sniffer) |
-| `custom_components/wifi_presence/` | Home Assistant integration |
+| `custom_components/wifi_presence/` | Home Assistant integration (what the Marketplace installs), with its `brand/` icons |
+| `hacs.json` | Marketplace / HACS metadata |
 | `web/` | The web flasher page ([ESP Web Tools](https://esphome.github.io/esp-web-tools/)) |
 | `docs/MANUAL.md` | User manual |
 | `PROTOCOL.md` | Bluetooth protocol |
 | `tools/wp_client.py` | Command-line client (read the list, push settings) |
 | `test/` | Host tests (C), protocol tests, Home Assistant tests, a hostile-client hardware test |
 | `.github/workflows/build.yml` | Tests, firmware build, web flasher publishing |
+| `.github/workflows/validate.yml` | HACS and hassfest checks (the Marketplace requirements) |

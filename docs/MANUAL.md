@@ -24,7 +24,7 @@ Home Assistant.
   C5 works: it is the ESP32 with 5 GHz Wi-Fi.
 - A computer with **Chrome, Edge or another Chromium browser** and a USB cable, for the
   one-time flashing.
-- **Home Assistant** 2025.1 or newer, with Bluetooth within reach of the sensor: either
+- **Home Assistant** 2025.1 or newer (2026.11 or newer for the built-in Marketplace), with Bluetooth within reach of the sensor: either
   a Bluetooth adapter in the Home Assistant machine or an
   [ESPHome Bluetooth proxy](https://esphome.io/components/bluetooth_proxy.html)
   near the sensor. The sensor itself needs only USB power.
@@ -61,24 +61,39 @@ the computer again.
 
 ## 2. Install the Home Assistant integration
 
-The integration is a small custom component. Do this once.
+The integration is a community repository. You add it to the Marketplace once; after that it
+installs and updates like any other integration.
 
-**With HACS** (recommended):
+**Home Assistant 2026.11 or newer (Marketplace)**, the easy way:
 
-1. HACS → ⋮ → *Custom repositories* → add
-   `https://github.com/ctandi/esp32c5-wifi-presence-detector`, category *Integration*.
-2. Search for *Wi-Fi Presence Sensor*, download it, **restart Home Assistant**.
+[![Open your Home Assistant instance and show the repository in the Marketplace.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=ctandi&repository=esp32c5-wifi-presence-detector&category=integration)
 
-**Without HACS:** copy the folder `custom_components/wifi_presence` from this
-repository into the `custom_components` folder of your Home Assistant configuration
-(next to `configuration.yaml`; create `custom_components` if it does not exist), then
-**restart Home Assistant**.
+Or by hand:
+
+1. *Settings → Marketplace*. Accept the warning the first time you open it.
+2. *Add from link* (upper-right corner), enter `ctandi/esp32c5-wifi-presence-detector`, *Add*.
+   The Marketplace asks you to connect GitHub if you have not: it shows a code, you enter it
+   on github.com and approve (needed to add custom repositories and to check for updates;
+   it gets no access to private repositories and no permission to change anything).
+   If it asks for the type, choose *Integration*.
+3. Open the repository, *Install*, confirm. The integration's setup page opens when Home
+   Assistant can load it right away; if a restart is needed, a repair under
+   *Settings → System → Repairs* offers it. In that case restart before step 3 of this manual.
+
+**Home Assistant 2026.10 or older (HACS):** HACS → ⋮ → *Custom repositories* → add
+`https://github.com/ctandi/esp32c5-wifi-presence-detector`, type *Integration* → download
+*Wi-Fi Presence Sensor* → restart Home Assistant.
+
+**Without either:** copy the folder `custom_components/wifi_presence` from this
+repository into the `custom_components` folder of your Home Assistant configuration (next to
+`configuration.yaml`; create `custom_components` if it does not exist) and restart.
 
 ## 3. Pair the sensor
 
 1. Open *Settings → Devices & services*. The sensor appears under **Discovered** as
    *Wi-Fi presence 22:33* (the end of the Bluetooth address printed in the box). Click
-   *Add*. If it does not appear, use *Add integration → Wi-Fi Presence Sensor*.
+   *Add*. If it does not appear, use *Add integration → Wi-Fi Presence Sensor*
+   ([shortcut](https://my.home-assistant.io/redirect/config_flow_start/?domain=wifi_presence)).
 2. Paste the **key** and continue. Home Assistant connects once to check the key.
 3. Enter **the name of your Wi-Fi** (the SSID). Add more than one if you have several
    networks or a guest network. Press Enter after each name. The country code is filled
