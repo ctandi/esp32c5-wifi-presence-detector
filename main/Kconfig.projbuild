@@ -1,0 +1,28 @@
+menu "Wi-Fi Presence Sensor"
+
+    config WP_MAX_DEVICES
+        int "Maximum number of tracked clients"
+        range 1 255
+        default 64
+        help
+            Every heard client is reported to Home Assistant, there is no
+            allowlist. This is the size of the table (a report of 64 clients
+            is about 600 bytes).
+
+    config WP_BLE_NAME
+        string "Bluetooth name"
+        default "WiFi Presence"
+
+    config WP_CONN_TIMEOUT_S
+        int "Drop a Bluetooth connection after this many seconds"
+        range 5 120
+        default 20
+        help
+            Home Assistant connects, asks, disconnects within a few seconds.
+            This stops a stranger from keeping the single connection busy.
+
+    config WP_SELFTEST_KAT
+        bool "Print a crypto known-answer vector at boot (for tests)"
+        default n
+
+endmenu

@@ -1,0 +1,100 @@
+name: Build
+
+# Tests every change, builds the firmware, and publishes the web flasher
+# (GitHub Pages) from main. Releases get the binaries attached.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - name: C logic (host tests with sanitizers)
+        run: bash test/run_host_tests.sh
+      - name: Protocol tests
+        run: |
+          pip install cryptography bleak
+          python -m unittest discover -s test -v
+      - name: Home Assistant integration tests
+        run: |
+          pip install pytest-homeassistant-custom-component
+          python -m pytest -q
+
+  firmware:
+    name: Firmware
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # v5.5.2 and later fix ESP32-C5 coexistence/reset problems of v5.5.1
+      # (Espressif advisory AR2025-008).
+      - name: Build with ESP-IDF
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.5.6
+          target: esp32c5
+          command: idf.py build merge-bin
+      - name: Assemble the web flasher
+        run: |
+          version="$(git describe --tags --always)"
+          mkdir -p site/firmware
+          cp web/index.html site/
+          sed "s/\"version\": \"dev\"/\"version\": \"${version}\"/" web/manifest.json > site/manifest.json
+          cp build/bootloader/bootloader.bin       site/firmware/bootloader.bin
+          cp build/partition_table/partition-table.bin site/firmware/partition-table.bin
+          cp build/c5-wifi-presence.bin            site/firmware/wifi-presence.bin
+          cp build/merged-binary.bin               site/firmware/wifi-presence-merged.bin
+          touch site/.nojekyll
+          ls -l site site/firmware
+      - uses: actions/upload-artifact@v7
+        with:
+          name: firmware
+          path: site/firmware/
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  pages:
+    name: Publish web flasher
+    needs: firmware
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
+
+  release:
+    name: Attach binaries to the release
+    needs: firmware
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: firmware
+          path: firmware
+      - name: Upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" firmware/*.bin --clobber --repo "${{ github.repository }}"

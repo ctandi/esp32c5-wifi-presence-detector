@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wi-Fi Presence Sensor: install</title>
+  <meta name="description" content="Flash an ESP32-C5 as a Wi-Fi presence sensor for Home Assistant, from your browser.">
+  <script type="module" src="https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module"></script>
+  <style>
+    :root {
+      --bg: #f6f7f9; --card: #ffffff; --text: #1c2430; --muted: #5b6675;
+      --line: #dde2e8; --accent: #0b6bcb; --accent-text: #ffffff; --warn-bg: #fff6e0; --warn-line: #e6c36a;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #12161c; --card: #1a2029; --text: #e6eaf0; --muted: #9aa5b4;
+        --line: #2b3441; --accent: #4da3ff; --accent-text: #0b1522; --warn-bg: #2b2412; --warn-line: #6b5a22;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+           font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 42rem; margin: 0 auto; padding: 2rem 1rem 3rem; }
+    h1 { font-size: 1.7rem; margin: 0 0 .25rem; }
+    .lead { color: var(--muted); margin: 0 0 1.5rem; }
+    ol { list-style: none; counter-reset: step; padding: 0; margin: 0; }
+    li { counter-increment: step; background: var(--card); border: 1px solid var(--line);
+         border-radius: 12px; padding: 1rem 1.1rem 1rem 3.4rem; margin: 0 0 .9rem; position: relative; }
+    li::before { content: counter(step); position: absolute; left: 1rem; top: 1rem; width: 1.7rem; height: 1.7rem;
+                 border-radius: 50%; background: var(--accent); color: var(--accent-text);
+                 display: grid; place-items: center; font-weight: 600; font-size: .95rem; }
+    h2 { font-size: 1.05rem; margin: 0 0 .35rem; }
+    p { margin: .3rem 0; }
+    .muted { color: var(--muted); font-size: .92rem; }
+    esp-web-install-button { display: inline-block; margin-top: .5rem; }
+    esp-web-install-button button { font: inherit; font-weight: 600; background: var(--accent); color: var(--accent-text);
+      border: 0; border-radius: 8px; padding: .65rem 1.2rem; cursor: pointer; }
+    .note { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 10px;
+            padding: .7rem .9rem; margin: .8rem 0 0; font-size: .92rem; }
+    a { color: var(--accent); }
+    kbd, code { font: .92em ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--bg);
+                border: 1px solid var(--line); border-radius: 4px; padding: .05rem .3rem; }
+    footer { color: var(--muted); font-size: .88rem; margin-top: 1.6rem; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Wi-Fi Presence Sensor</h1>
+  <p class="lead">Turn an ESP32-C5 into a presence sensor for Home Assistant. No router access, no pinging.
+     Everything after this page happens in Home Assistant.</p>
+
+  <ol>
+    <li>
+      <h2>Install the firmware</h2>
+      <p>Plug the ESP32-C5 into this computer with a USB cable, then:</p>
+      <esp-web-install-button manifest="manifest.json">
+        <button slot="activate">Install firmware</button>
+        <span slot="unsupported" class="note">This browser cannot flash devices. Use Chrome, Edge or another Chromium-based browser on a computer.</span>
+        <span slot="not-allowed" class="note">Flashing needs a secure (https) page.</span>
+      </esp-web-install-button>
+      <p class="muted">Pick the serial port of the board in the browser's dialog (usually named "USB JTAG/serial debug unit").
+         Leave "Erase device" <strong>off</strong> when updating: your key and settings are kept.
+         Tick it for a clean start with a new key.</p>
+    </li>
+    <li>
+      <h2>Copy the pairing key</h2>
+      <p>When the installation finishes, click <strong>Logs &amp; Console</strong>. Within ten seconds the sensor prints a box with a
+         64-character <strong>key</strong>. Select the key line and copy it.</p>
+      <p class="muted">It repeats every ten seconds until Home Assistant has paired. You can unplug the board and plug it
+         into any USB power supply afterwards; you will not need this computer again.</p>
+    </li>
+    <li>
+      <h2>Pair it in Home Assistant</h2>
+      <p><em>Settings &rarr; Devices &amp; services</em>: the sensor shows up under <strong>Discovered</strong> (found through any
+         Bluetooth adapter or ESPHome Bluetooth proxy). Click <em>Add</em>, paste the key, enter the name of your Wi-Fi.
+         Done: the sensor is now configured from Home Assistant, including later changes.</p>
+      <p class="muted">The integration is not in Home Assistant yet? See the
+         <a href="https://github.com/ctandi/esp32c5-wifi-presence-detector/blob/main/docs/MANUAL.md#2-install-the-home-assistant-integration">manual, step 2</a>
+         (one minute, via HACS or by copying a folder).</p>
+    </li>
+  </ol>
+
+  <div class="note">
+    <strong>Board does not start after flashing?</strong> If the console shows <code>rst:0x7 (TG0_WDT_HPSYS)</code> over and over,
+    unplug the USB cable, wait a few seconds and plug it in again.
+    See the <a href="https://github.com/ctandi/esp32c5-wifi-presence-detector/blob/main/docs/MANUAL.md#troubleshooting">troubleshooting section</a>.
+  </div>
+
+  <footer>
+    Firmware <code id="version">dev</code> &middot;
+    <a href="https://github.com/ctandi/esp32c5-wifi-presence-detector">Source and manual</a> &middot;
+    Flashing runs entirely in your browser via <a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools</a>.
+  </footer>
+</main>
+<script>
+  fetch("manifest.json").then(r => r.json()).then(m => { document.getElementById("version").textContent = m.version; }).catch(() => {});
+</script>
+</body>
+</html>

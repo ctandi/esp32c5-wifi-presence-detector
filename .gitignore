@@ -1,0 +1,12 @@
+# ESP-IDF build output and per-developer configuration
+build/
+sdkconfig
+sdkconfig.old
+managed_components/
+dependencies.lock
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/

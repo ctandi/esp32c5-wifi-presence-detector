@@ -1,0 +1,144 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "WLAN-Präsenzsensor",
+        "description": "Wählen Sie den Sensor.",
+        "data": {
+          "address": "Sensor"
+        }
+      },
+      "key": {
+        "title": "Kopplungsschlüssel",
+        "description": "Geben Sie den Kopplungsschlüssel von {name} ein. Der Sensor gibt ihn auf der seriellen Konsole aus: im Web-Flasher auf „Logs & Console“ klicken (er wiederholt sich alle 10 Sekunden, bis die Kopplung abgeschlossen ist).",
+        "data": {
+          "key": "Schlüssel"
+        }
+      },
+      "settings": {
+        "title": "Was soll der Sensor beobachten?",
+        "description": "Der Sensor lauscht Ihrem WLAN, ohne sich anzumelden. Geben Sie den Namen Ihres Netzes ein. Alles andere kann bleiben, wie es ist.",
+        "data": {
+          "ssids": "WLAN-Netze (SSIDs)",
+          "country": "Ländercode"
+        },
+        "data_description": {
+          "ssids": "Geräte aller Access Points, die einen dieser Namen aussenden, werden erfasst. Nach jedem Namen Enter drücken. Bis zu 8.",
+          "country": "Zwei Buchstaben, zum Beispiel DE. Bestimmt, welche 5-GHz-Kanäle der Sensor abhören darf."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Erweiterte Einstellungen",
+            "description": "Die Voreinstellungen passen für die meisten Haushalte.",
+            "data": {
+              "band": "Frequenzbänder",
+              "scan_dwell_ms": "Suchzeit pro Kanal",
+              "hop_ms": "Lauschzeit pro Kanal",
+              "rescan_s": "Suche wiederholen alle",
+              "hold_s": "Gerät anwesend halten für",
+              "min_frames": "Pakete bis zur Anwesenheit",
+              "min_rssi": "Mindest-Signalstärke",
+              "poll_interval_s": "Sensor abfragen alle"
+            },
+            "data_description": {
+              "band": "In welchen Bändern nach Ihren Netzen gesucht wird. Nur ein Band zu wählen beschleunigt die Suche, wenn Ihr Netz nur dieses nutzt.",
+              "scan_dwell_ms": "Wie lange der Sensor beim Suchen Ihrer Access Points auf jedem Kanal lauscht. Muss länger als ein Beacon-Intervall (etwa 100 ms) sein. Länger findet auch schwache Access Points, macht die Suche aber langsamer.",
+              "hop_ms": "Gilt, wenn Ihre Access Points auf mehreren Kanälen liegen (2,4 und 5 GHz, Mesh-Knoten): wie lange der Sensor auf einem Kanal bleibt, bevor er zum nächsten wechselt. Kürzer erfasst selten sendende Geräte auf jedem Kanal schneller.",
+              "rescan_s": "Wie oft der Sensor erneut nach Ihren Access Points sucht, um Kanalwechsel zu folgen.",
+              "hold_s": "Ein Gerät bleibt so lange „zu Hause“, nachdem sein letztes Paket gehört wurde. Das ist auch die Verzögerung bis „abwesend“. Schlafende Handys senden selten: erhöhen Sie den Wert, wenn ein Handy fälschlich auf abwesend springt.",
+              "min_frames": "So oft muss ein Gerät gehört werden, bevor es als anwesend zählt. Schützt vor einem einzelnen verirrten Paket.",
+              "min_rssi": "Pakete schwächer als dieser Wert werden ignoriert. -100 hört alles; ein höherer Wert (zum Beispiel -80) blendet weit entfernte Geräte oder solche außerhalb des Hauses aus.",
+              "poll_interval_s": "Wie oft Home Assistant dem Sensor seine Liste abnimmt. Keine Einstellung des Sensors selbst."
+            }
+          }
+        }
+      },
+      "reauth_confirm": {
+        "title": "Neuer Kopplungsschlüssel",
+        "description": "{name} akzeptiert den alten Schlüssel nicht mehr, vermutlich wurde er neu geflasht. Geben Sie den Schlüssel ein, den er jetzt ausgibt.",
+        "data": {
+          "key": "Schlüssel"
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "Der Schlüssel muss genau 64 Hexadezimalziffern haben.",
+      "wrong_key": "Der Sensor hat geantwortet, aber der Schlüssel passt nicht.",
+      "cannot_connect": "Der Sensor ist per Bluetooth nicht erreichbar. Hat er Strom und ist ein Adapter oder Bluetooth-Proxy in Reichweite?",
+      "no_ssid": "Geben Sie mindestens einen Netzwerknamen ein.",
+      "too_many_ssids": "Höchstens 8 Netze.",
+      "ssid_too_long": "Ein Netzwerkname ist höchstens 32 Bytes lang.",
+      "invalid_country": "Geben Sie einen zweistelligen Ländercode ein, zum Beispiel DE.",
+      "invalid_settings": "Ein Wert liegt außerhalb des erlaubten Bereichs.",
+      "settings_rejected": "Der Sensor hat die Einstellungen abgelehnt."
+    },
+    "abort": {
+      "already_configured": "Dieser Sensor ist bereits eingerichtet.",
+      "no_devices_found": "Kein Sensor gefunden. Hat er Strom und ist ein Adapter oder Bluetooth-Proxy in Reichweite?",
+      "reauth_successful": "Der neue Schlüssel wurde gespeichert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sensor-Einstellungen",
+        "description": "Änderungen gehen sofort an den Sensor und bleiben auch nach einem Neustart erhalten.",
+        "data": {
+          "ssids": "WLAN-Netze (SSIDs)",
+          "country": "Ländercode"
+        },
+        "data_description": {
+          "ssids": "Geräte aller Access Points, die einen dieser Namen aussenden, werden erfasst. Nach jedem Namen Enter drücken. Bis zu 8.",
+          "country": "Zwei Buchstaben, zum Beispiel DE. Bestimmt, welche 5-GHz-Kanäle der Sensor abhören darf."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Erweiterte Einstellungen",
+            "description": "Die Voreinstellungen passen für die meisten Haushalte.",
+            "data": {
+              "band": "Frequenzbänder",
+              "scan_dwell_ms": "Suchzeit pro Kanal",
+              "hop_ms": "Lauschzeit pro Kanal",
+              "rescan_s": "Suche wiederholen alle",
+              "hold_s": "Gerät anwesend halten für",
+              "min_frames": "Pakete bis zur Anwesenheit",
+              "min_rssi": "Mindest-Signalstärke",
+              "poll_interval_s": "Sensor abfragen alle"
+            },
+            "data_description": {
+              "band": "In welchen Bändern nach Ihren Netzen gesucht wird. Nur ein Band zu wählen beschleunigt die Suche, wenn Ihr Netz nur dieses nutzt.",
+              "scan_dwell_ms": "Wie lange der Sensor beim Suchen Ihrer Access Points auf jedem Kanal lauscht. Muss länger als ein Beacon-Intervall (etwa 100 ms) sein. Länger findet auch schwache Access Points, macht die Suche aber langsamer.",
+              "hop_ms": "Gilt, wenn Ihre Access Points auf mehreren Kanälen liegen (2,4 und 5 GHz, Mesh-Knoten): wie lange der Sensor auf einem Kanal bleibt, bevor er zum nächsten wechselt. Kürzer erfasst selten sendende Geräte auf jedem Kanal schneller.",
+              "rescan_s": "Wie oft der Sensor erneut nach Ihren Access Points sucht, um Kanalwechsel zu folgen.",
+              "hold_s": "Ein Gerät bleibt so lange „zu Hause“, nachdem sein letztes Paket gehört wurde. Das ist auch die Verzögerung bis „abwesend“. Schlafende Handys senden selten: erhöhen Sie den Wert, wenn ein Handy fälschlich auf abwesend springt.",
+              "min_frames": "So oft muss ein Gerät gehört werden, bevor es als anwesend zählt. Schützt vor einem einzelnen verirrten Paket.",
+              "min_rssi": "Pakete schwächer als dieser Wert werden ignoriert. -100 hört alles; ein höherer Wert (zum Beispiel -80) blendet weit entfernte Geräte oder solche außerhalb des Hauses aus.",
+              "poll_interval_s": "Wie oft Home Assistant dem Sensor seine Liste abnimmt. Keine Einstellung des Sensors selbst."
+            }
+          }
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "Der Schlüssel muss genau 64 Hexadezimalziffern haben.",
+      "wrong_key": "Der Sensor hat geantwortet, aber der Schlüssel passt nicht.",
+      "cannot_connect": "Der Sensor ist per Bluetooth nicht erreichbar. Hat er Strom und ist ein Adapter oder Bluetooth-Proxy in Reichweite?",
+      "no_ssid": "Geben Sie mindestens einen Netzwerknamen ein.",
+      "too_many_ssids": "Höchstens 8 Netze.",
+      "ssid_too_long": "Ein Netzwerkname ist höchstens 32 Bytes lang.",
+      "invalid_country": "Geben Sie einen zweistelligen Ländercode ein, zum Beispiel DE.",
+      "invalid_settings": "Ein Wert liegt außerhalb des erlaubten Bereichs.",
+      "settings_rejected": "Der Sensor hat die Einstellungen abgelehnt."
+    }
+  },
+  "selector": {
+    "band": {
+      "options": {
+        "both": "2,4 GHz und 5 GHz",
+        "2g": "Nur 2,4 GHz",
+        "5g": "Nur 5 GHz"
+      }
+    }
+  }
+}

@@ -1,0 +1,144 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Wi-Fi presence sensor",
+        "description": "Choose the sensor.",
+        "data": {
+          "address": "Sensor"
+        }
+      },
+      "key": {
+        "title": "Pairing key",
+        "description": "Enter the pairing key of {name}. The sensor prints it on its serial console: in the web flasher click \"Logs & Console\" (it repeats every 10 seconds until pairing is done).",
+        "data": {
+          "key": "Key"
+        }
+      },
+      "settings": {
+        "title": "What should the sensor watch?",
+        "description": "The sensor listens to your Wi-Fi without joining it. Enter the name of your network. Everything else can stay as it is.",
+        "data": {
+          "ssids": "Wi-Fi networks (SSIDs)",
+          "country": "Country code"
+        },
+        "data_description": {
+          "ssids": "Clients of every access point that announces one of these names are tracked. Press Enter after each name. Up to 8.",
+          "country": "Two letters, for example DE. Decides which 5 GHz channels the sensor may listen on."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Advanced settings",
+            "description": "The defaults suit most homes.",
+            "data": {
+              "band": "Frequency bands",
+              "scan_dwell_ms": "Search time per channel",
+              "hop_ms": "Listening time per channel",
+              "rescan_s": "Search again every",
+              "hold_s": "Keep a device present for",
+              "min_frames": "Frames needed to count",
+              "min_rssi": "Minimum signal strength",
+              "poll_interval_s": "Check the sensor every"
+            },
+            "data_description": {
+              "band": "Which bands to search for your networks. Pick one if your network only uses that band, it speeds up the search.",
+              "scan_dwell_ms": "How long the sensor listens on each channel when looking for your access points. Must exceed one beacon interval (about 100 ms). Longer finds weak access points but makes the search slower.",
+              "hop_ms": "Used when your access points are on several channels (2.4 and 5 GHz, mesh nodes): how long the sensor stays on one before moving to the next. Shorter catches rarely talking devices sooner on every channel.",
+              "rescan_s": "How often the sensor looks for your access points again, to follow channel changes.",
+              "hold_s": "A device stays 'home' this long after its last frame. This is also the delay until 'away'. Sleeping phones talk rarely, so raise it if a phone wrongly flips to away.",
+              "min_frames": "A device must be heard this many times before it counts as present. Guards against a single stray frame.",
+              "min_rssi": "Ignore frames weaker than this. -100 hears everything; raise it (for example -80) to ignore devices far away or outside.",
+              "poll_interval_s": "How often Home Assistant asks the sensor for its list. Not a setting of the sensor itself."
+            }
+          }
+        }
+      },
+      "reauth_confirm": {
+        "title": "New pairing key",
+        "description": "{name} no longer accepts the old key, probably because it was flashed again. Enter the key it prints now.",
+        "data": {
+          "key": "Key"
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "The key must be exactly 64 hex digits.",
+      "wrong_key": "The sensor answered, but the key does not match.",
+      "cannot_connect": "Could not reach the sensor over Bluetooth. Is it powered and in range of an adapter or Bluetooth proxy?",
+      "no_ssid": "Enter at least one network name.",
+      "too_many_ssids": "At most 8 networks.",
+      "ssid_too_long": "A network name is at most 32 bytes long.",
+      "invalid_country": "Enter a two-letter country code, for example DE.",
+      "invalid_settings": "A value is out of range.",
+      "settings_rejected": "The sensor refused the settings."
+    },
+    "abort": {
+      "already_configured": "This sensor is already set up.",
+      "no_devices_found": "No sensor found. Is it powered and in range of an adapter or Bluetooth proxy?",
+      "reauth_successful": "The new key was saved."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sensor settings",
+        "description": "Changes are sent to the sensor right away and survive its restarts.",
+        "data": {
+          "ssids": "Wi-Fi networks (SSIDs)",
+          "country": "Country code"
+        },
+        "data_description": {
+          "ssids": "Clients of every access point that announces one of these names are tracked. Press Enter after each name. Up to 8.",
+          "country": "Two letters, for example DE. Decides which 5 GHz channels the sensor may listen on."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Advanced settings",
+            "description": "The defaults suit most homes.",
+            "data": {
+              "band": "Frequency bands",
+              "scan_dwell_ms": "Search time per channel",
+              "hop_ms": "Listening time per channel",
+              "rescan_s": "Search again every",
+              "hold_s": "Keep a device present for",
+              "min_frames": "Frames needed to count",
+              "min_rssi": "Minimum signal strength",
+              "poll_interval_s": "Check the sensor every"
+            },
+            "data_description": {
+              "band": "Which bands to search for your networks. Pick one if your network only uses that band, it speeds up the search.",
+              "scan_dwell_ms": "How long the sensor listens on each channel when looking for your access points. Must exceed one beacon interval (about 100 ms). Longer finds weak access points but makes the search slower.",
+              "hop_ms": "Used when your access points are on several channels (2.4 and 5 GHz, mesh nodes): how long the sensor stays on one before moving to the next. Shorter catches rarely talking devices sooner on every channel.",
+              "rescan_s": "How often the sensor looks for your access points again, to follow channel changes.",
+              "hold_s": "A device stays 'home' this long after its last frame. This is also the delay until 'away'. Sleeping phones talk rarely, so raise it if a phone wrongly flips to away.",
+              "min_frames": "A device must be heard this many times before it counts as present. Guards against a single stray frame.",
+              "min_rssi": "Ignore frames weaker than this. -100 hears everything; raise it (for example -80) to ignore devices far away or outside.",
+              "poll_interval_s": "How often Home Assistant asks the sensor for its list. Not a setting of the sensor itself."
+            }
+          }
+        }
+      }
+    },
+    "error": {
+      "invalid_key": "The key must be exactly 64 hex digits.",
+      "wrong_key": "The sensor answered, but the key does not match.",
+      "cannot_connect": "Could not reach the sensor over Bluetooth. Is it powered and in range of an adapter or Bluetooth proxy?",
+      "no_ssid": "Enter at least one network name.",
+      "too_many_ssids": "At most 8 networks.",
+      "ssid_too_long": "A network name is at most 32 bytes long.",
+      "invalid_country": "Enter a two-letter country code, for example DE.",
+      "invalid_settings": "A value is out of range.",
+      "settings_rejected": "The sensor refused the settings."
+    }
+  },
+  "selector": {
+    "band": {
+      "options": {
+        "both": "2.4 GHz and 5 GHz",
+        "2g": "2.4 GHz only",
+        "5g": "5 GHz only"
+      }
+    }
+  }
+}

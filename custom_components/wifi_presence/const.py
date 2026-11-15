@@ -1,0 +1,35 @@
+"""Constants for the Wi-Fi presence integration."""
+
+from datetime import timedelta
+
+DOMAIN = "wifi_presence"
+
+# config entry data
+CONF_KEY = "key"
+
+# config entry options (the sensor's settings, pushed to it over Bluetooth)
+CONF_SSIDS = "ssids"
+CONF_COUNTRY = "country"
+CONF_BAND = "band"
+CONF_SCAN_DWELL = "scan_dwell_ms"
+CONF_HOP = "hop_ms"
+CONF_RESCAN = "rescan_s"
+CONF_HOLD = "hold_s"
+CONF_MIN_FRAMES = "min_frames"
+CONF_MIN_RSSI = "min_rssi"
+# kept in Home Assistant only
+CONF_POLL_INTERVAL = "poll_interval_s"
+SECTION_ADVANCED = "advanced"
+
+BAND_OPTIONS = {"both": 0, "2g": 1, "5g": 2}
+
+# How often Home Assistant asks the sensor for its client list.
+DEFAULT_POLL_INTERVAL = 30
+POLL_INTERVAL_RANGE = (10, 300)
+# Give the sensor this long to answer a request.
+RESPONSE_TIMEOUT = 10.0
+
+
+def poll_interval(seconds: int) -> timedelta:
+    """The polling period as a timedelta."""
+    return timedelta(seconds=seconds)
