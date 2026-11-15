@@ -782,7 +782,7 @@ async def test_old_per_client_devices_are_cleaned_up_on_start(hass: HomeAssistan
     entry = _entry()
     entry.add_to_hass(hass)
     devices, entities = dr.async_get(hass), er.async_get(hass)
-    # what versions before 1.1.0 left behind: a device per client, named like the sensor
+    # what pre-release builds left behind: a device per client, named like the sensor
     legacy = devices.async_get_or_create(
         config_entry_id=entry.entry_id, connections={(dr.CONNECTION_NETWORK_MAC, PHONE)}, name=entry.title
     )

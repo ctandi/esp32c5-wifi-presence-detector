@@ -154,9 +154,9 @@ for an address (or for *Wi-Fi presence*) finds them; use the *Entities* tab of t
 integration, with disabled entities shown, to see all of them. If another integration
 already knows a device by that address (a phone with the companion app, a router entry), Home
 Assistant gives the tracker a small device of its own, named after the address; that is
-why a few such entries can appear on the integration page. Older versions (before 1.1.0)
-created a device per client, all named like the sensor; the integration removes those when
-it starts.
+why a few such entries can appear on the integration page. Development builds from before the first
+release created a device per client, all named like the sensor; the integration removes
+those when it starts.
 
 Phones usually use a *private* Wi-Fi address per network. That address stays the same for
 that network, so it works. If you set the phone to "rotate" the address, it looks like a
@@ -357,13 +357,13 @@ idf.py -p /dev/ttyACM0 flash monitor      # prints the pairing box
 
 There is nothing to configure: no SSID, no key, no secrets in the build. The only build
 options (`idf.py menuconfig` → *Wi-Fi Presence Sensor*) are the client table size, the
-Bluetooth name and the connection timeout.
+Bluetooth name, the connection timeout, and the status LED (on or off, pin, polarity).
 
 **Tests:**
 
 | What | How |
 |------|-----|
-| C logic: frames, settings codec, report, fragments (with sanitizers) | `test/run_host_tests.sh` |
+| C logic: frames, settings codec, report, fragments, LED timing (with sanitizers) | `test/run_host_tests.sh` |
 | Protocol, settings, session logic, against a simulated sensor and a firmware-produced known-answer vector | `python3 -m unittest discover -s test` (needs `cryptography`, `bleak`) |
 | Home Assistant integration: config flow, options, reauth, entities | `pip install pytest-homeassistant-custom-component && python test/ha/install_requirements.py`, then `pytest` |
 | A real sensor, as a hostile client: forged, replayed, tampered and malformed commands | `python3 test/hardware/command_security.py --key <key>` (needs a Bluetooth adapter) |

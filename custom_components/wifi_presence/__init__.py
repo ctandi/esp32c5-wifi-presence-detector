@@ -18,7 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _remove_legacy_client_devices(hass: HomeAssistant, entry: WifiPresenceConfigEntry) -> None:
-    """Drop the per-client devices that versions before 1.1.0 created.
+    """Drop the per-client devices that pre-release builds created.
 
     Each tracker used to get a device of its own, named like the sensor, so the
     integration page listed the sensor once per client. Trackers are plain entities

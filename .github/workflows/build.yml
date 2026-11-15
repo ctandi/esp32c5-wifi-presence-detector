@@ -40,6 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # tags too, so the firmware and the web page know their version
       # v5.5.2 and later fix ESP32-C5 coexistence/reset problems of v5.5.1
       # (Espressif advisory AR2025-008).
       - name: Build with ESP-IDF

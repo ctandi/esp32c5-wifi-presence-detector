@@ -100,26 +100,32 @@ derived from the pairing key and both sides' nonces. Details and the wire format
 
 ## Project status
 
-What has been verified, and how:
+This is a first release (0.1): it works in daily use on the author's setup, and has not been
+tried by many people yet. What has been verified, and how:
 
-- **On real hardware** (ESP32-C5, ESP-IDF 5.5.1, a Linux Bluetooth adapter): sniffing five
-  access points on both bands, 10 to 18 devices heard, the encrypted exchange, pushing settings
-  (including every band and timing option), settings surviving reboots and updates, and 17
-  attack cases against the command channel (wrong key, flipped bits, replays, bad
-  fragments, ...): none got through (`test/hardware/command_security.py`).
-- **In Home Assistant's own test framework:** config flow, settings and options flow,
-  re-authentication, entities, home/away, availability (35 tests, with mutation checks).
-- **CI and web flasher:** the GitHub Actions workflow runs green (tests, firmware build with
-  ESP-IDF v5.5.6, GitHub Pages deploy). The three firmware parts the page serves were
-  downloaded from the live site, flashed to a real board with esptool, and passed the same
-  checks as the local build (pairing, scanning, the 17 attack cases).
-- **Not yet verified:** the integration running in a live Home Assistant through an
-  ESPHome Bluetooth proxy, and the flashing click-through in a browser (ESP Web Tools was not
-  driven from a browser here). Please report what you find.
+- **In a live Home Assistant 2026.11, through an ESPHome Bluetooth proxy:** flashing with the web
+  flasher, discovery, pairing with the key, pushing and changing settings, the *Configure*
+  dialog (device picker, track all, rename), re-authentication, the status LED, and polling
+  every 30 seconds.
+- **On real hardware** (Seeed XIAO ESP32-C5, ESP-IDF 5.5.1 and the CI build with 5.5.6): sniffing
+  access points on both bands, the encrypted exchange, every settings option (band, search and
+  listening times, hold time, ...), settings surviving reboots and updates, and 17 attack cases
+  against the command channel (wrong key, flipped bits, replays, bad fragments, ...): none got
+  through (`test/hardware/command_security.py`).
+- **Automated tests:** C logic (frames, settings, report, LED timing), 38 protocol tests with a
+  firmware-produced known-answer vector, 50 Home Assistant tests (config flow, options flow,
+  re-authentication, entities, trackers), run by CI on every push, with mutation checks while
+  writing them.
+- **Not verified:** more than one sensor in one Home Assistant, Home Assistant versions other
+  than 2026.11 (the manifest asks for 2025.1 or newer, but nothing older was run), flashing from
+  Windows or macOS (only Linux with Chromium was used), and the Marketplace *update*
+  path (only installs).
 - **Known:** with an ESP-IDF v5.5.1 build the chip got stuck after a forced reset twice in
   ~30 tries and needed a USB unplug; with the published v5.5.6 build, 10 of 10 resets were
   fine, which is encouraging but too few to call it fixed. See
   [troubleshooting](docs/MANUAL.md#troubleshooting).
+
+Please report what you find: [issues](https://github.com/ctandi/esp32c5-wifi-presence-detector/issues).
 
 ## License
 
