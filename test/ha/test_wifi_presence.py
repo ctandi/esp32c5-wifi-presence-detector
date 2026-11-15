@@ -14,6 +14,7 @@ from habluetooth import BluetoothServiceInfoBleak
 import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
+    async_capture_events,
     async_fire_time_changed,
 )
 
@@ -26,7 +27,10 @@ from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import dt as dt_util
 
 from custom_components.wifi_presence.client import PollError
+from custom_components.wifi_presence import logbook as wp_logbook
 from custom_components.wifi_presence.const import (
+    EVENT_CLIENT_ARRIVED,
+    EVENT_CLIENT_LEFT,
     CONF_BAND,
     CONF_COUNTRY,
     CONF_HOLD,
@@ -809,3 +813,144 @@ async def test_old_per_client_devices_are_cleaned_up_on_start(hass: HomeAssistan
     assert devices.async_get(others.id) is not None and devices.async_get(renamed.id) is not None
     kept = entities.async_get(tracker.entity_id)
     assert kept is not None and kept.device_id is None and kept.unique_id == f"{entry.entry_id}_{PHONE}"
+
+
+# ---- presence changes in the activity log -----------------------------------------------
+
+ESP = "ac:67:b2:11:22:33"  # a registered vendor (Espressif)
+
+
+def _up(uptime: int, *macs: str, applied: bool = False) -> SessionResult:
+    """A poll result for a sensor that has been running for `uptime` seconds."""
+    return SessionResult(
+        report=Report(uptime_s=uptime, ap_count=2, truncated=False,
+                      clients=tuple(Client(m, -50, 3) for m in macs)),
+        config_applied=applied,
+    )
+
+
+async def test_arrivals_and_departures_become_events(hass: HomeAssistant, freezer) -> None:
+    entry = await _setup(hass, AsyncMock(return_value=_up(1000, PHONE)))
+    arrived = async_capture_events(hass, EVENT_CLIENT_ARRIVED)
+    left = async_capture_events(hass, EVENT_CLIENT_LEFT)
+    sensor = next(iter(dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)))
+
+    await _tick(hass, freezer, AsyncMock(return_value=_up(1031, PHONE)))
+    assert not arrived and not left  # nothing changed
+
+    await _tick(hass, freezer, AsyncMock(return_value=_up(1062, PHONE, ESP)))
+    assert [e.data["mac"] for e in arrived] == [ESP] and not left
+    data = arrived[0].data
+    assert data["vendor"] == "Espressif Inc." and data["rssi"] == -50 and data["name"] is None
+    assert data["device_id"] == sensor.id  # that is what puts it in the sensor's activity log
+    assert data["entry_id"] == entry.entry_id
+
+    await _tick(hass, freezer, AsyncMock(return_value=_up(1093, ESP)))
+    assert [e.data["mac"] for e in left] == [PHONE] and len(arrived) == 1
+    assert left[0].data["vendor"] is None  # PHONE is a randomized address: no vendor
+
+
+async def test_the_first_poll_does_not_announce_everybody(hass: HomeAssistant) -> None:
+    arrived = async_capture_events(hass, EVENT_CLIENT_ARRIVED)
+    await _setup(hass, AsyncMock(return_value=_up(5000, PHONE, TV, ESP)))
+    assert not arrived
+
+
+async def test_a_sensor_restart_is_not_everybody_leaving_and_arriving(hass: HomeAssistant, freezer) -> None:
+    await _setup(hass, AsyncMock(return_value=_up(5000, PHONE, TV)))
+    arrived = async_capture_events(hass, EVENT_CLIENT_ARRIVED)
+    left = async_capture_events(hass, EVENT_CLIENT_LEFT)
+    # the sensor restarted: its table is empty, then fills up again
+    await _tick(hass, freezer, AsyncMock(return_value=_up(20)))
+    await _tick(hass, freezer, AsyncMock(return_value=_up(51, PHONE)))
+    await _tick(hass, freezer, AsyncMock(return_value=_up(82, PHONE, TV)))
+    assert not arrived and not left
+    # once it has been up long enough, changes are announced again
+    await _tick(hass, freezer, AsyncMock(return_value=_up(500, PHONE, TV, ESP)))
+    assert [e.data["mac"] for e in arrived] == [ESP]
+
+
+async def test_an_unreachable_sensor_does_not_make_everybody_leave(hass: HomeAssistant, freezer) -> None:
+    await _setup(hass, AsyncMock(return_value=_up(1000, PHONE, TV)))
+    arrived = async_capture_events(hass, EVENT_CLIENT_ARRIVED)
+    left = async_capture_events(hass, EVENT_CLIENT_LEFT)
+    await _tick(hass, freezer, AsyncMock(side_effect=PollError("out of range")))
+    await _tick(hass, freezer, AsyncMock(side_effect=PollError("out of range")))
+    await _tick(hass, freezer, AsyncMock(return_value=_up(1100, PHONE, TV)))
+    assert not arrived and not left
+
+
+async def test_events_carry_the_name_another_integration_gave_the_device(hass: HomeAssistant, freezer) -> None:
+    entry = _entry()
+    entry.add_to_hass(hass)
+    phone_entry = MockConfigEntry(domain="mobile_app", title="Pixel")
+    phone_entry.add_to_hass(hass)
+    dr.async_get(hass).async_get_or_create(
+        config_entry_id=phone_entry.entry_id, connections={(dr.CONNECTION_NETWORK_MAC, ESP)}, name="Kitchen radio"
+    )
+    with patch("custom_components.wifi_presence.coordinator.async_poll", AsyncMock(return_value=_up(1000, PHONE))):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    arrived = async_capture_events(hass, EVENT_CLIENT_ARRIVED)
+    await _tick(hass, freezer, AsyncMock(return_value=_up(1031, PHONE, ESP)))
+    assert arrived[0].data["name"] == "Kitchen radio"
+
+
+async def _describe(hass: HomeAssistant, event_type: str, data: dict) -> dict:
+    """What the activity log would show for an event, via the integration's own platform."""
+    from homeassistant.core import Event
+
+    described = {}
+    wp_logbook.async_describe_events(hass, lambda domain, etype, fn: described.update({etype: (domain, fn)}))
+    domain, describer = described[event_type]
+    assert domain == DOMAIN
+    return describer(Event(event_type, data))
+
+
+async def test_activity_log_wording(hass: HomeAssistant) -> None:
+    base = {"mac": ESP, "vendor": "Espressif Inc.", "name": None}
+    arrived = await _describe(hass, EVENT_CLIENT_ARRIVED, base)
+    assert arrived == {"name": f"{ESP} (Espressif Inc.)", "message": "just became present"}
+    left = await _describe(hass, EVENT_CLIENT_LEFT, base)
+    assert left["message"] == "is now gone"
+    # no vendor: nothing is added, not even a placeholder
+    plain = await _describe(hass, EVENT_CLIENT_LEFT, {"mac": PHONE, "vendor": None, "name": None})
+    assert plain["name"] == PHONE and "unknown" not in plain["name"].lower()
+    # a known name comes first
+    named = await _describe(hass, EVENT_CLIENT_ARRIVED, {**base, "name": "Kitchen radio"})
+    assert named["name"] == f"Kitchen radio ({ESP}, Espressif Inc.)"
+
+
+async def test_activity_log_follows_the_language_of_home_assistant(hass: HomeAssistant) -> None:
+    hass.config.language = "de"
+    base = {"mac": ESP, "vendor": None, "name": None}
+    assert (await _describe(hass, EVENT_CLIENT_ARRIVED, base))["message"] == "ist jetzt anwesend"
+    assert (await _describe(hass, EVENT_CLIENT_LEFT, base))["message"] == "ist nicht mehr da"
+
+
+# ---- the vendor in the device list ---------------------------------------------------------
+
+
+async def test_the_device_list_shows_the_vendor_and_nothing_when_there_is_none(hass: HomeAssistant) -> None:
+    entry = await _setup(hass, AsyncMock(return_value=_result(PHONE, ESP)))
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    labels = {o["value"]: o["label"] for o in _tracked_field(result)[1].config["options"]}
+    assert labels[ESP] == f"{ESP} (Espressif Inc.) \u00b7 -50 dBm"
+    assert labels[PHONE] == f"{PHONE} \u00b7 -50 dBm"  # a randomized address: no vendor, no placeholder
+    assert not any("unknown" in label.lower() for label in labels.values())
+
+
+async def test_vendor_and_known_name_go_together(hass: HomeAssistant) -> None:
+    entry = _entry()
+    entry.add_to_hass(hass)
+    phone_entry = MockConfigEntry(domain="mobile_app", title="Pixel")
+    phone_entry.add_to_hass(hass)
+    dr.async_get(hass).async_get_or_create(
+        config_entry_id=phone_entry.entry_id, connections={(dr.CONNECTION_NETWORK_MAC, ESP)}, name="Kitchen radio"
+    )
+    with patch("custom_components.wifi_presence.coordinator.async_poll", AsyncMock(return_value=_result(ESP))):
+        await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    labels = {o["value"]: o["label"] for o in _tracked_field(result)[1].config["options"]}
+    assert labels[ESP] == f"Kitchen radio \u00b7 {ESP} (Espressif Inc.) \u00b7 -50 dBm"

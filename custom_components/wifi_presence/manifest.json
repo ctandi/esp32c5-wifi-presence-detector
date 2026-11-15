@@ -1,6 +1,9 @@
 {
   "domain": "wifi_presence",
   "name": "Wi-Fi Presence Sensor",
+  "after_dependencies": [
+    "logbook"
+  ],
   "bluetooth": [
     {
       "service_uuid": "6e1d0001-5a3c-4f1e-9b7a-0c2d8e4f1a60",
@@ -26,5 +29,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/ctandi/esp32c5-wifi-presence-detector/issues",
   "requirements": [],
-  "version": "0.1.0"
+  "version": "0.2.0-beta.1"
 }

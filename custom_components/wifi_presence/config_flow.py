@@ -20,8 +20,7 @@ from homeassistant.config_entries import (
 from homeassistant.const import CONF_ADDRESS, CONF_NAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import section
-from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
     BooleanSelector,
     NumberSelector,
@@ -34,6 +33,7 @@ from homeassistant.helpers.selector import (
     TextSelectorConfig,
 )
 
+from . import oui
 from .client import PollError, async_poll
 from .const import (
     BAND_OPTIONS,
@@ -55,6 +55,7 @@ from .const import (
     POLL_INTERVAL_RANGE,
     SECTION_ADVANCED,
 )
+from .labels import known_name, mac_with_vendor
 from .protocol import (
     HOLD_RANGE,
     HOP_RANGE,
@@ -160,22 +161,15 @@ def _tracker_choices(
     """Label every known device so the user can recognise their phone.
 
     A name Home Assistant already knows for the MAC (from a phone or router
-    integration) comes first; devices heard right now show their signal strength.
+    integration) comes first, then the address with its vendor (nothing is added when
+    no vendor is known); devices heard right now show their signal strength.
     """
-    devices = dr.async_get(hass)
     coordinator = getattr(entry, "runtime_data", None)
     heard = {c.mac: c for c in coordinator.data.clients} if coordinator and coordinator.data else {}
     choices = []
     for mac in macs:
-        # Several devices can share a MAC (one per integration). Our own are named after
-        # the MAC; the useful name belongs to another integration's device.
-        names = [
-            device.name_by_user or device.name
-            for device in devices.async_get_devices(connections={(CONNECTION_NETWORK_MAC, mac)})
-            if device.config_entry_id != entry.entry_id
-        ]
-        name = next((n for n in names if n and n != mac), None)
-        parts = [name, mac] if name else [mac]
+        name = known_name(hass, entry, mac)
+        parts = [name, mac_with_vendor(mac)] if name else [mac_with_vendor(mac)]
         if mac in heard:
             parts.append(f"{heard[mac].rssi} dBm")
         choices.append(SelectOptionDict(value=mac, label=" · ".join(parts)))
@@ -399,6 +393,7 @@ class WifiPresenceOptionsFlow(OptionsFlow):
         """Show and apply the settings."""
         entry = self.config_entry
         errors: dict[str, str] = {}
+        await self.hass.async_add_executor_job(oui.load)  # the vendor table, for the labels
         trackers = _known_trackers(self.hass, entry)
         choices = _tracker_choices(self.hass, entry, sorted(trackers))
         current = options_from_config(

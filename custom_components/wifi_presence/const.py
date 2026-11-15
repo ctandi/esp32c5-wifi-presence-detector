@@ -26,6 +26,13 @@ SECTION_ADVANCED = "advanced"
 
 BAND_OPTIONS = {"both": 0, "2g": 1, "5g": 2}
 
+# Events fired when a device becomes present or leaves, shown in the sensor's activity log.
+EVENT_CLIENT_ARRIVED = "wifi_presence_client_arrived"
+EVENT_CLIENT_LEFT = "wifi_presence_client_left"
+# While the sensor has been running for less than this, its list is still filling up after a
+# start: changes are noted silently instead of flooding the activity log.
+WARMUP_S = 120
+
 # How often Home Assistant asks the sensor for its client list.
 DEFAULT_POLL_INTERVAL = 30
 POLL_INTERVAL_RANGE = (10, 300)

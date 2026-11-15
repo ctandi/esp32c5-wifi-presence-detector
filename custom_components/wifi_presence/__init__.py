@@ -8,6 +8,7 @@ from homeassistant.const import CONF_ADDRESS, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
+from . import oui
 from .const import CONF_KEY
 from .coordinator import WifiPresenceConfigEntry, WifiPresenceCoordinator
 from .protocol import parse_key
@@ -47,6 +48,7 @@ def _remove_legacy_client_devices(hass: HomeAssistant, entry: WifiPresenceConfig
 async def async_setup_entry(hass: HomeAssistant, entry: WifiPresenceConfigEntry) -> bool:
     """Set up a sensor from a config entry."""
     _remove_legacy_client_devices(hass, entry)
+    await hass.async_add_executor_job(oui.load)  # vendor names for the activity log
     coordinator = WifiPresenceCoordinator(
         hass, entry, entry.data[CONF_ADDRESS], parse_key(entry.data[CONF_KEY])
     )

@@ -98,7 +98,7 @@
         "data_description": {
           "ssids": "Clients of every access point that announces one of these names are tracked. Press Enter after each name. Up to 8.",
           "country": "Two letters, for example DE. Decides which 5 GHz channels the sensor may listen on.",
-          "tracked": "Pick the devices whose presence you want, for example your phone. Each becomes a device tracker you can put on a person; the others stay hidden. Devices heard right now are listed first with their signal strength (your phone is usually the strongest when it is next to the sensor). Newly heard devices appear here after the next check.",
+          "tracked": "Pick the devices whose presence you want, for example your phone. Each becomes a device tracker you can put on a person; the others stay hidden. Devices heard right now are listed first with their signal strength (your phone is usually the strongest when it is next to the sensor). Newly heard devices appear here after the next check. Each address is followed by its vendor in brackets when one is known.",
           "name": "What this sensor is called in Home Assistant, for example \"Wi-Fi presence living room\". It names the sensor's device and its entities. The default is the sensor's Bluetooth address.",
           "track_all_devices": "On: every device the sensor hears gets its tracker enabled at once, and so does every new one. Off: only the devices you pick under \"Devices to track\" appear. A tracker you switch off yourself stays off, so single devices can be excluded."
         },

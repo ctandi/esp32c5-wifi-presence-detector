@@ -98,7 +98,7 @@
         "data_description": {
           "ssids": "Geräte aller Access Points, die einen dieser Namen aussenden, werden erfasst. Nach jedem Namen Enter drücken. Bis zu 8.",
           "country": "Zwei Buchstaben, zum Beispiel DE. Bestimmt, welche 5-GHz-Kanäle der Sensor abhören darf.",
-          "tracked": "Wählen Sie die Geräte, deren Anwesenheit Sie brauchen, zum Beispiel Ihr Handy. Jedes wird zu einem Gerätetracker, den Sie einer Person zuordnen können; die übrigen bleiben verborgen. Gerade gehörte Geräte stehen oben mit ihrer Signalstärke (Ihr Handy ist meist am stärksten, wenn es neben dem Sensor liegt). Neu gehörte Geräte erscheinen hier nach der nächsten Abfrage.",
+          "tracked": "Wählen Sie die Geräte, deren Anwesenheit Sie brauchen, zum Beispiel Ihr Handy. Jedes wird zu einem Gerätetracker, den Sie einer Person zuordnen können; die übrigen bleiben verborgen. Gerade gehörte Geräte stehen oben mit ihrer Signalstärke (Ihr Handy ist meist am stärksten, wenn es neben dem Sensor liegt). Neu gehörte Geräte erscheinen hier nach der nächsten Abfrage. Hinter jeder Adresse steht in Klammern der Hersteller, soweit bekannt.",
           "name": "Wie dieser Sensor in Home Assistant heißt, zum Beispiel „WLAN-Präsenz Wohnzimmer“. Der Name gilt für das Gerät des Sensors und seine Entitäten. Standard ist die Bluetooth-Adresse des Sensors.",
           "track_all_devices": "An: Jedes Gerät, das der Sensor hört, bekommt sofort einen aktiven Tracker, ebenso jedes neue. Aus: Nur die Geräte, die Sie unter „Zu verfolgende Geräte“ wählen, erscheinen. Ein von Ihnen abgeschalteter Tracker bleibt aus, so lassen sich einzelne Geräte ausnehmen."
         },

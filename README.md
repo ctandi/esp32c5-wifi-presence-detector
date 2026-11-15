@@ -52,7 +52,7 @@ Or step by step, **Home Assistant 2026.11 or newer (Marketplace):**
 4. The setup page of the integration opens if Home Assistant can load it right away. If it
    asks for a restart instead, a repair under *Settings → System → Repairs* offers it.
 
-**Home Assistant 2026.10 or older (HACS):** in HACS use ⋮ → *Custom repositories*, add the
+**Home Assistant 2026.10 (HACS):** in HACS use ⋮ → *Custom repositories*, add the
 same URL with the type *Integration*, download *Wi-Fi Presence Sensor*, and restart
 Home Assistant.
 
@@ -72,6 +72,10 @@ Discovered*, or start the setup with
   (with the names Home Assistant already knows, and signal strength). Put your phone's on a Person.
 - A status LED (the yellow one on the XIAO ESP32-C5): slow blink while it waits for Home
   Assistant, steady when connected, a flash on activity.
+- An **activity log** on the sensor's device: "*AA:BB:CC:11:22:33 (Vendor) just became present*" and
+  "... is now gone". The same events can trigger automations.
+- The **vendor** of each device (from the bundled IEEE registry, offline) next to its address in the
+  device list and in the log; nothing is shown for randomized addresses or unknown vendors.
 - A sensor you can name (for example *Wi-Fi presence living room*), so several sensors stay apart.
 - Settings in Home Assistant: the Wi-Fi names to watch (several allowed), country, bands,
   scan time per channel, how long a sleeping phone stays "home", minimum signal strength and
@@ -112,12 +116,12 @@ tried by many people yet. What has been verified, and how:
   listening times, hold time, ...), settings surviving reboots and updates, and 17 attack cases
   against the command channel (wrong key, flipped bits, replays, bad fragments, ...): none got
   through (`test/hardware/command_security.py`).
-- **Automated tests:** C logic (frames, settings, report, LED timing), 38 protocol tests with a
-  firmware-produced known-answer vector, 50 Home Assistant tests (config flow, options flow,
-  re-authentication, entities, trackers), run by CI on every push, with mutation checks while
+- **Automated tests:** C logic (frames, settings, report, LED timing), 49 protocol and vendor-lookup tests with a
+  firmware-produced known-answer vector, 59 Home Assistant tests (config flow, options flow,
+  re-authentication, entities, trackers, activity log events), run by CI on every push, with mutation checks while
   writing them.
 - **Not verified:** more than one sensor in one Home Assistant, Home Assistant versions other
-  than 2026.11 (the manifest asks for 2025.1 or newer, but nothing older was run), flashing from
+  than 2026.10 and 2026.11 (the integration needs 2026.10 or newer), flashing from
   Windows or macOS (only Linux with Chromium was used), and the Marketplace *update*
   path (only installs).
 - **Known:** with an ESP-IDF v5.5.1 build the chip got stuck after a forced reset twice in
@@ -129,7 +133,8 @@ Please report what you find: [issues](https://github.com/ctandi/esp32c5-wifi-pre
 
 ## License
 
-[MIT](LICENSE). The firmware builds on ESP-IDF, NimBLE and mbedTLS (Apache-2.0); the web
+[MIT](LICENSE). The firmware builds on ESP-IDF, NimBLE and mbedTLS (Apache-2.0); the MAC vendor
+table is distilled from the public IEEE Registration Authority OUI registry (`tools/update_oui.py`); the web
 flasher loads [ESP Web Tools](https://esphome.github.io/esp-web-tools/) (Apache-2.0) from a CDN.
 
 ## Repository
@@ -143,6 +148,7 @@ flasher loads [ESP Web Tools](https://esphome.github.io/esp-web-tools/) (Apache-
 | `docs/MANUAL.md` | User manual |
 | `PROTOCOL.md` | Bluetooth protocol |
 | `tools/wp_client.py` | Command-line client (read the list, push settings) |
+| `tools/update_oui.py` | Rebuilds the bundled MAC vendor table from the IEEE registry |
 | `test/` | Host tests (C), protocol tests, Home Assistant tests, a hostile-client hardware test |
 | `.github/workflows/build.yml` | Tests, firmware build, web flasher publishing |
 | `.github/workflows/validate.yml` | HACS and hassfest checks (the Marketplace requirements) |

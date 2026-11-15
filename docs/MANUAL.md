@@ -11,6 +11,9 @@ Home Assistant.
 [2 Install the integration](#2-install-the-home-assistant-integration) ·
 [3 Pair](#3-pair-the-sensor) ·
 [4 Use it](#4-use-it) ·
+[Activity log](#activity-log) ·
+[Vendor names](#vendor-names) ·
+[Status LED](#the-status-led) ·
 [Settings](#settings-reference) ·
 [Tuning](#tuning-recipes) ·
 [Updating and resetting](#updating-and-resetting) ·
@@ -24,7 +27,7 @@ Home Assistant.
   C5 works: it is the ESP32 with 5 GHz Wi-Fi.
 - A computer with **Chrome, Edge or another Chromium browser** and a USB cable, for the
   one-time flashing.
-- **Home Assistant** 2025.1 or newer (2026.11 or newer for the built-in Marketplace), with Bluetooth within reach of the sensor: either
+- **Home Assistant** 2026.10 or newer (2026.11 or newer for the built-in Marketplace), with Bluetooth within reach of the sensor: either
   a Bluetooth adapter in the Home Assistant machine or an
   [ESPHome Bluetooth proxy](https://esphome.io/components/bluetooth_proxy.html)
   near the sensor. The sensor itself needs only USB power.
@@ -80,7 +83,7 @@ Or by hand:
    Assistant can load it right away; if a restart is needed, a repair under
    *Settings → System → Repairs* offers it. In that case restart before step 3 of this manual.
 
-**Home Assistant 2026.10 or older (HACS):** HACS → ⋮ → *Custom repositories* → add
+**Home Assistant 2026.10 (HACS):** HACS → ⋮ → *Custom repositories* → add
 `https://github.com/ctandi/esp32c5-wifi-presence-detector`, type *Integration* → download
 *Wi-Fi Presence Sensor* → restart Home Assistant.
 
@@ -133,7 +136,10 @@ To pick devices one by one:
 
 1. Open *Settings → Devices & services → Wi-Fi Presence Sensor → Configure*.
 2. In **Devices to track**, open the list. It shows every device the sensor has heard, the
-   ones heard right now first, with their signal strength. Devices Home Assistant already knows
+   ones heard right now first, with their signal strength. Each address is followed by the
+   **vendor** of the device in brackets when one is known, for example
+   `AA:BB:CC:11:22:33 (Vendor)`: that often identifies a phone, TV or plug at a glance. Nothing
+   is shown for devices without a known vendor (see [Vendor names](#vendor-names)). Devices Home Assistant already knows
    by name (for example from the companion app or your router) are listed with that name.
    Tick your phone. If you cannot tell which one it is, put the phone right next to the
    sensor: it will be the strongest, or switch the phone's Wi-Fi off for a few minutes and
@@ -167,6 +173,46 @@ asks every 30 seconds, so "home" arrives within about half a minute. "Away" is
 deliberately slower: a phone that is asleep talks rarely, so the sensor waits 5 minutes
 (*Keep a device present for*) before it believes the phone has left. Together with the
 polling this means "away" after 5 to 5½ minutes. Both numbers are settings.
+
+## Activity log
+
+Open *Settings → Devices & services → Wi-Fi Presence Sensor →* your sensor. Its **Activity**
+list (the logbook) shows when devices come and go, next to the changes of the sensors:
+
+> AA:BB:CC:11:22:33 (Vendor) just became present
+> AA:BB:CC:11:22:33 (Vendor) is now gone
+
+(In German Home Assistant: *ist jetzt anwesend* / *ist nicht mehr da*.) A device Home Assistant
+already knows by name shows with that name first: `Kitchen radio (AA:BB:…, Vendor)`.
+
+- This covers **every device the sensor hears**, not only the ones you track, so you can see
+  who is on your Wi-Fi. "Gone" comes after the hold time (5 minutes by default) because a device
+  stays present that long after its last frame.
+- **Nothing is logged for the first check after Home Assistant starts, while the sensor is still
+  filling its list after a restart (its first two minutes), or while the sensor is unreachable.**
+  Otherwise a restart would look like everybody leaving and arriving.
+- The same information is available as events for automations: `wifi_presence_client_arrived` and
+  `wifi_presence_client_left`, with `mac`, `vendor` (or none), `name` (or none), `device_id` and, for
+  arrivals, `rssi`:
+
+  ```yaml
+  triggers:
+    - trigger: event
+      event_type: wifi_presence_client_arrived
+      event_data:
+        mac: "aa:bb:cc:11:22:33"
+  ```
+
+## Vendor names
+
+The first three bytes of a MAC address say which company registered it. The integration looks them
+up in a copy of the public IEEE registry (about 54,000 entries) that ships with it, **offline**: no
+address is ever sent anywhere. The vendor shows in the device list and the activity log.
+
+Nothing is shown when there is no vendor to name, not even a placeholder: phones use a random
+("private") address per Wi-Fi network, which has no vendor by design, and some companies register
+under "Private". Refresh the table with `tools/update_oui.py` (it downloads the registry from the
+IEEE and rewrites `custom_components/wifi_presence/oui.tsv.gz`).
 
 ## The status LED
 
@@ -326,6 +372,8 @@ Remove the integration in Home Assistant, flash with *Erase device*, and begin a
 - **Only Home Assistant can change the settings.** A settings command must be sealed with a
   per-connection key derived from the pairing key. Forged, altered or replayed commands are
   ignored (this was tested against a real sensor: `test/hardware/command_security.py`).
+- **Vendor names are looked up offline.** The registry is bundled with the integration; no MAC
+  address leaves Home Assistant for the lookup.
 - **Not protected:** someone with physical access to the sensor can read the key from its
   flash (the same is true for an ESPHome API key), and a Wi-Fi sniffer next door sees the
   same frames the sensor does. A stranger in Bluetooth range can see that a sensor exists
