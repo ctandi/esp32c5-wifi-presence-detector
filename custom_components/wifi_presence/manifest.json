@@ -7,10 +7,17 @@
       "connectable": true
     }
   ],
+  "categories": [
+    "presence_location.network_presence",
+    "diy_makers.boards_hardware"
+  ],
   "codeowners": [
     "@ctandi"
   ],
   "config_flow": true,
+  "connectivity": [
+    "bluetooth"
+  ],
   "dependencies": [
     "bluetooth_adapters"
   ],
