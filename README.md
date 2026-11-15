@@ -74,6 +74,11 @@ What has been verified, and how:
 - **Known:** in testing, the chip got stuck after a forced reset twice in ~30 tries and
   needed a USB unplug; see [troubleshooting](docs/MANUAL.md#troubleshooting).
 
+## License
+
+[MIT](LICENSE). The firmware builds on ESP-IDF, NimBLE and mbedTLS (Apache-2.0); the web
+flasher loads [ESP Web Tools](https://esphome.github.io/esp-web-tools/) (Apache-2.0) from a CDN.
+
 ## Repository
 
 | Path | What |
