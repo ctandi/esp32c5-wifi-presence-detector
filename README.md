@@ -68,11 +68,17 @@ What has been verified, and how:
   fragments, ...): none got through (`test/hardware/command_security.py`).
 - **In Home Assistant's own test framework:** config flow, settings and options flow,
   re-authentication, entities, home/away, availability (35 tests, with mutation checks).
+- **CI and web flasher:** the GitHub Actions workflow runs green (tests, firmware build with
+  ESP-IDF v5.5.6, GitHub Pages deploy). The three firmware parts the page serves were
+  downloaded from the live site, flashed to a real board with esptool, and passed the same
+  checks as the local build (pairing, scanning, the 17 attack cases).
 - **Not yet verified:** the integration running in a live Home Assistant through an
-  ESPHome Bluetooth proxy, and the CI workflow / web flasher page (they were checked
-  piece by piece, but not run on GitHub). Please report what you find.
-- **Known:** in testing, the chip got stuck after a forced reset twice in ~30 tries and
-  needed a USB unplug; see [troubleshooting](docs/MANUAL.md#troubleshooting).
+  ESPHome Bluetooth proxy, and the flashing click-through in a browser (ESP Web Tools was not
+  driven from a browser here). Please report what you find.
+- **Known:** with an ESP-IDF v5.5.1 build the chip got stuck after a forced reset twice in
+  ~30 tries and needed a USB unplug; with the published v5.5.6 build, 10 of 10 resets were
+  fine, which is encouraging but too few to call it fixed. See
+  [troubleshooting](docs/MANUAL.md#troubleshooting).
 
 ## License
 
