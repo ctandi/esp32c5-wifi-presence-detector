@@ -181,9 +181,9 @@ Home Assistant says so and keeps your old settings, so the two never disagree.
 | **Country code** | your HA country | 2 letters | Which 5 GHz channels the sensor may listen on. Use your real country. |
 | **Track all devices automatically** | off | on / off | Enables the tracker of every device the sensor hears, now and in the future. See [Use it](#4-use-it). |
 | *Frequency bands* | 2.4 and 5 GHz | both / 2.4 only / 5 only | Where to search for your network. If your Wi-Fi lives on one band only, choosing it makes the search faster. |
-| *Search time per channel* | 200 ms | 120 to 1500 | How long the sensor listens on each channel while looking for your access points. Must be longer than one beacon (about 100 ms). Raise it if a weak access point is not found; it makes each search slower. |
+| *Search time per channel* | 200 ms | 120 to 1500 | How long the sensor listens on each channel while looking for your access points. Must be longer than one beacon (about 100 ms). Raise it if a weak access point is not found. **A full search takes about 80 times this value** (measured with 2.4 and 5 GHz in Germany: 12 s at 150 ms, 24 s at 300 ms), and **the sensor hears no devices while it searches**. The Wi-Fi driver recommends 360 ms and logs a harmless warning in the console when you use another value; the value is honoured. |
 | *Listening time per channel* | 2000 ms | 200 to 30000 | When your access points are on several channels (2.4 and 5 GHz, mesh nodes) the sensor hops between them. This is how long it stays on one. Short hops cover all channels more evenly; long hops catch more of one channel. |
-| *Search again every* | 600 s | 30 to 3600 | How often the sensor looks for your access points again, to follow a channel change. Sniffing pauses for a few seconds during each search. |
+| *Search again every* | 600 s | 30 to 3600 | How often the sensor looks for your access points again, to follow a channel change. Sniffing pauses for the duration of each search (see *Search time per channel*: 16 s at the default), so raise this rather than lowering the search time if you want fewer gaps. |
 | *Keep a device present for* | 300 s | 10 to 43200 | A device stays "home" this long after its last frame. This is your debounce against false "away", and the delay before a real "away". |
 | *Frames needed to count* | 3 | 1 to 100 | How many frames a device must send before it counts as present. Guards against one stray frame. |
 | *Minimum signal strength* | -100 dBm | -100 to -20 | Frames weaker than this are ignored. -100 hears everything. Raise it (try -80) to ignore devices far away or outside the house. |
@@ -252,6 +252,14 @@ The sensor counts devices that are *associated with your access points*. It need
 few seconds per channel: after a settings change, give it a minute. Raising *Search time
 per channel* helps if the access point count is lower than you expect. Devices connected to
 a band the sensor cannot hear well (distance) are missed.
+
+**The console shows `wifi:Error! Should use default passive scan time parameter for WiFi scan when Bluetooth is enabled!!!!!!`.**
+Harmless. The Wi-Fi driver prints it at the start of every search whose *Search time per channel*
+is not 360 ms (the default is 200 ms), because it would prefer its own default while Bluetooth
+is on. The search runs normally and uses the time you set; this was checked on a real sensor
+by timing the searches (150 ms: 12 s, 300 ms: 24 s). It is not an error of your setup, and
+the message does not appear for the very first search after power-up. Using 360 ms silences
+it, at the price of longer searches (28 s) during which nothing is heard.
 
 **The console shows `disconnected (reason 531)` after every check.**
 That is normal. 531 means "the other side ended the connection": Home Assistant connects,

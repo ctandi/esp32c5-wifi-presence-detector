@@ -47,7 +47,7 @@
             },
             "data_description": {
               "band": "In welchen Bändern nach Ihren Netzen gesucht wird. Nur ein Band zu wählen beschleunigt die Suche, wenn Ihr Netz nur dieses nutzt.",
-              "scan_dwell_ms": "Wie lange der Sensor beim Suchen Ihrer Access Points auf jedem Kanal lauscht. Muss länger als ein Beacon-Intervall (etwa 100 ms) sein. Länger findet auch schwache Access Points, macht die Suche aber langsamer.",
+              "scan_dwell_ms": "Wie lange der Sensor beim Suchen Ihrer Access Points auf jedem Kanal lauscht. Muss länger als ein Beacon (etwa 100 ms) sein. Eine vollständige Suche dauert etwa das 80-Fache dieses Werts (24 s bei 300 ms), und währenddessen hört der Sensor keine Geräte; wählen Sie ihn also kurz, außer ein schwacher Access Point wird übersehen. Der WLAN-Treiber empfiehlt 360 ms und gibt für andere Werte eine harmlose Warnung auf der Konsole des Sensors aus.",
               "hop_ms": "Gilt, wenn Ihre Access Points auf mehreren Kanälen liegen (2,4 und 5 GHz, Mesh-Knoten): wie lange der Sensor auf einem Kanal bleibt, bevor er zum nächsten wechselt. Kürzer erfasst selten sendende Geräte auf jedem Kanal schneller.",
               "rescan_s": "Wie oft der Sensor erneut nach Ihren Access Points sucht, um Kanalwechsel zu folgen.",
               "hold_s": "Ein Gerät bleibt so lange „zu Hause“, nachdem sein letztes Paket gehört wurde. Das ist auch die Verzögerung bis „abwesend“. Schlafende Handys senden selten: erhöhen Sie den Wert, wenn ein Handy fälschlich auf abwesend springt.",
@@ -118,7 +118,7 @@
             },
             "data_description": {
               "band": "In welchen Bändern nach Ihren Netzen gesucht wird. Nur ein Band zu wählen beschleunigt die Suche, wenn Ihr Netz nur dieses nutzt.",
-              "scan_dwell_ms": "Wie lange der Sensor beim Suchen Ihrer Access Points auf jedem Kanal lauscht. Muss länger als ein Beacon-Intervall (etwa 100 ms) sein. Länger findet auch schwache Access Points, macht die Suche aber langsamer.",
+              "scan_dwell_ms": "Wie lange der Sensor beim Suchen Ihrer Access Points auf jedem Kanal lauscht. Muss länger als ein Beacon (etwa 100 ms) sein. Eine vollständige Suche dauert etwa das 80-Fache dieses Werts (24 s bei 300 ms), und währenddessen hört der Sensor keine Geräte; wählen Sie ihn also kurz, außer ein schwacher Access Point wird übersehen. Der WLAN-Treiber empfiehlt 360 ms und gibt für andere Werte eine harmlose Warnung auf der Konsole des Sensors aus.",
               "hop_ms": "Gilt, wenn Ihre Access Points auf mehreren Kanälen liegen (2,4 und 5 GHz, Mesh-Knoten): wie lange der Sensor auf einem Kanal bleibt, bevor er zum nächsten wechselt. Kürzer erfasst selten sendende Geräte auf jedem Kanal schneller.",
               "rescan_s": "Wie oft der Sensor erneut nach Ihren Access Points sucht, um Kanalwechsel zu folgen.",
               "hold_s": "Ein Gerät bleibt so lange „zu Hause“, nachdem sein letztes Paket gehört wurde. Das ist auch die Verzögerung bis „abwesend“. Schlafende Handys senden selten: erhöhen Sie den Wert, wenn ein Handy fälschlich auf abwesend springt.",

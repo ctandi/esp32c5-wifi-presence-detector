@@ -47,7 +47,7 @@
             },
             "data_description": {
               "band": "Which bands to search for your networks. Pick one if your network only uses that band, it speeds up the search.",
-              "scan_dwell_ms": "How long the sensor listens on each channel when looking for your access points. Must exceed one beacon interval (about 100 ms). Longer finds weak access points but makes the search slower.",
+              "scan_dwell_ms": "How long the sensor listens on each channel when looking for your access points. Must exceed one beacon (about 100 ms). A full search takes about 80 times this value (24 s at 300 ms) and the sensor hears no devices meanwhile, so keep it short unless a weak access point is missed. The Wi-Fi driver recommends 360 ms and logs a harmless warning in the sensor's console for other values.",
               "hop_ms": "Used when your access points are on several channels (2.4 and 5 GHz, mesh nodes): how long the sensor stays on one before moving to the next. Shorter catches rarely talking devices sooner on every channel.",
               "rescan_s": "How often the sensor looks for your access points again, to follow channel changes.",
               "hold_s": "A device stays 'home' this long after its last frame. This is also the delay until 'away'. Sleeping phones talk rarely, so raise it if a phone wrongly flips to away.",
@@ -118,7 +118,7 @@
             },
             "data_description": {
               "band": "Which bands to search for your networks. Pick one if your network only uses that band, it speeds up the search.",
-              "scan_dwell_ms": "How long the sensor listens on each channel when looking for your access points. Must exceed one beacon interval (about 100 ms). Longer finds weak access points but makes the search slower.",
+              "scan_dwell_ms": "How long the sensor listens on each channel when looking for your access points. Must exceed one beacon (about 100 ms). A full search takes about 80 times this value (24 s at 300 ms) and the sensor hears no devices meanwhile, so keep it short unless a weak access point is missed. The Wi-Fi driver recommends 360 ms and logs a harmless warning in the sensor's console for other values.",
               "hop_ms": "Used when your access points are on several channels (2.4 and 5 GHz, mesh nodes): how long the sensor stays on one before moving to the next. Shorter catches rarely talking devices sooner on every channel.",
               "rescan_s": "How often the sensor looks for your access points again, to follow channel changes.",
               "hold_s": "A device stays 'home' this long after its last frame. This is also the delay until 'away'. Sleeping phones talk rarely, so raise it if a phone wrongly flips to away.",
